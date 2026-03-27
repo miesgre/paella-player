@@ -92,7 +92,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-	
+	overflow: hidden;
 }
 
 .video-container.over-playback-bar {
