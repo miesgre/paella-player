@@ -34,7 +34,7 @@ const PreactContainer = ({paellaPlugin, children}: PreactContainerProps) => {
 };
 
 
-export type LoadVectorStoteProgressCallback = (err: Error | null, progress: number, total: number) => void;
+export type LoadVectorStoteProgressCallback = (err: Error | null, progress: number, total: number) => Promise<void>;
 
 
 
@@ -138,7 +138,7 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
     }
 
 
-    async loadVectorStore(progressCallback: LoadVectorStoteProgressCallback = () => {}) {
+    async loadVectorStore(progressCallback: LoadVectorStoteProgressCallback = async () => {}) {
         try {            
             const { RecursiveCharacterTextSplitter } = await import("@langchain/classic/text_splitter");
             const { MemoryVectorStore } = await import("@langchain/classic/vectorstores/memory");
@@ -168,7 +168,8 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
             progressCallback(null, 0, videoChunks.length);
             for (const [index, chunk] of videoChunks.entries()) {                
                 await this._vectorStore.addDocuments([chunk]);
-                progressCallback(null, index + 1, videoChunks.length);
+                await progressCallback(null, index + 1, videoChunks.length);
+                // await new Promise(resolve => setTimeout(resolve, 0));
             }            
         }
         catch (error) {            
