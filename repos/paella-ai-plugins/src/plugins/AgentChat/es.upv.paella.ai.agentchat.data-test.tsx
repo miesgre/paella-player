@@ -30,9 +30,22 @@ export class AIAgentChatDataTestPlugin extends AIAgentChatDataPlugin<AIAgentChat
         return "es.upv.paella.ai.content.data-test";
     }    
 
-    async read(_context: string, key: string): Promise<AIAgentChatContentData | null> {        
+    async read(_context: string, key: string): Promise<AIAgentChatContentData | null> {
+
+        const url = `${this.player.repositoryUrl}/${this.player.videoId}/captions.es.vtt`;
+
+        // Read the file content
+        let content = await fetch(url)
+            .then(async (response) => {
+                if (!response.ok) {                        
+                    return null;
+                }
+                else {
+                    return await response.text();
+                }
+            });
         
-        return `This is a test message from the AIAgentChatDataTestPlugin. It is used to test the data plugin functionality of the AIAgentChatPlugin. key = ${key}`;
+        return content;
         
     }
 }

@@ -34,13 +34,20 @@ const PreactContainer = ({paellaPlugin, children}: PreactContainerProps) => {
 };
 
 
+export type LoadVectorStoteProgressCallback = (err: Error | null, progress: number, total: number) => void;
+
+
+
+
+
+
 export interface AIAgentChatPluginconfig extends InteractiveAreaPluginConfig {
     // No specific config needed beyond base
 }
 
 export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChatPluginconfig> {
     private _appRootElement: HTMLDivElement | null = null;
-    private _vectorStore: MemoryVectorStore | null = null;
+    private _vectorStore: MemoryVectorStore | null = null;    
     showWelcomeMessage = true;
 
     getPluginModuleInstance() {
@@ -61,26 +68,54 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
     }
 
     async load() { 
-        await this.loadVectorStore();
-        const agent = await this.createAgent();
-        console.log("Agent created:", agent);
+        // await this.loadVectorStore((err, progress, total) => {
+        //     if (err) {
+        //         console.error("Error loading vector store:", err);
+        //     }
+        //     else {
+        //         console.log(`Vector store loading progress: ${progress}/${total}`);
+        //     }
+        // });
+        // const agent = await this.createAgent();
+        // console.log("Agent created:", agent);
 
-        const userQuestion = "Hola";
-        const respuesta = await agent.invoke({
-            messages: [
-                { 
-                    role: "user", 
-                    content: userQuestion 
-                    // content: "usa la tool search_in_class para buscar sobre la RedSara y dime exactamente lo que devuelve la tool, sin inventar nada. No respondas con tu conocimiento general, solo lo que devuelva la tool."
-                }
-            ]
-        });
+        // const userQuestion = "Dime los conceptos mas importantes de la clase y en que instante se discuten.";
+        // const respuesta = await agent.invoke({
+        //     messages: [
+        //         { 
+        //             role: "user", 
+        //             content: userQuestion                    
+        //         }
+        //     ]
+        // }, { 
+        //     configurable: { 
+        //         thread_id: "memory_thread_id" 
+        //     } 
+        // });
 
-        // LangChain devuelve un objeto con el historial completo de mensajes.
-        // La respuesta final del agente siempre es el último mensaje del array.
-        const mensajeFinal = respuesta.messages[respuesta.messages.length - 1];
-        console.log("\n🤖 Agente:");
-        console.log(mensajeFinal.content);
+        // // LangChain devuelve un objeto con el historial completo de mensajes.
+        // // La respuesta final del agente siempre es el último mensaje del array.
+        // const mensajeFinal = respuesta.messages[respuesta.messages.length - 1];
+        // console.log(respuesta.messages);
+        // console.log("\n🤖 Agente:");
+        // console.log(mensajeFinal.content);
+
+
+
+
+        // const respuesta2 = await agent.invoke({
+        //     messages: [{ role: "user",  content: "Que te acabo de preguntar?" }]
+        // }, { 
+        //     configurable: { 
+        //         thread_id: "memory_thread_id" 
+        //     } 
+        // });
+
+        // // LangChain devuelve un objeto con el historial completo de mensajes.
+        // // La respuesta final del agente siempre es el último mensaje del array.
+        // const mensajeFinal2 = respuesta2.messages[respuesta2.messages.length - 1];
+        // console.log("\n🤖 Agente:");
+        // console.log(mensajeFinal2.content);
     }
 
     async getContent(): Promise<HTMLElement> {
@@ -103,51 +138,50 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
     }
 
 
-    async loadVectorStore() {
-        try {
-            await import("@huggingface/transformers")
+    async loadVectorStore(progressCallback: LoadVectorStoteProgressCallback = () => {}) {
+        try {            
             const { RecursiveCharacterTextSplitter } = await import("@langchain/classic/text_splitter");
             const { MemoryVectorStore } = await import("@langchain/classic/vectorstores/memory");
             const { HuggingFaceTransformersEmbeddings } = await import("@langchain/community/embeddings/huggingface_transformers");
 
 
-            const rawVttFile = await this.player.data?.read("agentchat.captions", "captions");
-        
+            const embeddings = new HuggingFaceTransformersEmbeddings({
+                model: "Xenova/all-MiniLM-L6-v2"
+            });
+            this._vectorStore = new MemoryVectorStore(embeddings);
+
+
+
+            const rawVttFile = await this.player.data?.read("agentchat.captions", "captions");        
             const cleanText = rawVttFile
                 .replace(/WEBVTT\n\n/g, "") // Elimina la cabecera
                 // .replace(/\d{2}:\d{2}:\d{2}\.\d{3} --> \d{2}:\d{2}:\d{2}\.\d{3}\n/g, "") // Descomenta esto para quitar los timestamps
                 .trim();
             
-        
             const splitter = new RecursiveCharacterTextSplitter({
-                chunkSize: 1000,
+                chunkSize: 2000,
                 chunkOverlap: 200,
             });
 
-            const misChunksDeLaClase = await splitter.createDocuments([cleanText]);
-            console.log(`Se han creado ${misChunksDeLaClase.length} chunks de texto.`);
-            console.log("Vectorizando los chunks... (esto puede tardar unos segundos)");
-            const embeddings = new HuggingFaceTransformersEmbeddings({
-                model: "Xenova/all-MiniLM-L6-v2"
-            });
-
-
-            this._vectorStore = new MemoryVectorStore(embeddings);
-            await this._vectorStore.addDocuments(misChunksDeLaClase);
-
-            const resultados = await this._vectorStore.similaritySearchWithScore("prueba", 4);
-            console.log(`Se han encontrado ${resultados.length} resultados similares.`);
+            const videoChunks = await splitter.createDocuments([cleanText]);
+            
+            progressCallback(null, 0, videoChunks.length);
+            for (const [index, chunk] of videoChunks.entries()) {                
+                await this._vectorStore.addDocuments([chunk]);
+                progressCallback(null, index + 1, videoChunks.length);
+            }            
         }
-        catch (error) {
-            console.error("Error al cargar el vector store:", error);
+        catch (error) {            
+            this._vectorStore = null;
+            progressCallback(error as Error, 0, 0);
         }
-
     }
 
     async createAgent() {
         const { tool } = await import("@langchain/core/tools");
         const { createAgent } = await import("langchain");
         const { ChatOpenAI } = await import("@langchain/openai");
+        const { MemorySaver } = await import("@langchain/langgraph");
         
         const searchInClassTool = tool(
             async ({ query }) => {
@@ -230,9 +264,10 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
             },
         });
 
+        const checkpointer = new MemorySaver();
         const agent = createAgent({
             model: model,
-            // checkpointer: checkpointer,
+            checkpointer: checkpointer,
             tools: [
                 searchInClassTool,
                 getTotalChunksTool,
