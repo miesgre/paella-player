@@ -30,7 +30,7 @@ export default function ChatWelcome({ onClick = () => {} }: ChatWelcomeProps) {
                 
                 
                 <div className="button-container">
-                    <button role="button" onClick={onClick}>
+                    <button onClick={onClick}>
                         {paellaPlugin.player.translate("Start")}
                     </button>
                 </div>
