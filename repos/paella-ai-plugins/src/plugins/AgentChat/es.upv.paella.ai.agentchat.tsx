@@ -1,0 +1,246 @@
+import {
+    Plugin, Events, bindEvent, InteractiveAreaPlugin,
+    type InteractiveAreaPluginConfig
+} from '@asicupv/paella-core'
+import { createContext, render, type ComponentChildren, type RefObject } from 'preact';
+import { useContext, useRef } from 'preact/hooks';
+import { MainAppContent } from './ui/MainAppContent';
+import PackagePluginModule from '../PackagePluginModule';
+import { z } from "zod";
+import type { MemoryVectorStore } from "@langchain/classic/vectorstores/memory";
+// import { HuggingFaceTransformersEmbeddings } from "@langchain/community/embeddings/huggingface_transformers";
+
+const PaellaPluginContext = createContext<Plugin | null>(null);
+
+export function usePaellaPlugin<T extends Plugin>(): T {
+  const context = useContext(PaellaPluginContext);
+  if (!context) {
+    throw new Error("usePaellaPlugin must be used inside Preact");
+  }
+  return context as T;
+};
+
+type PreactContainerProps = {
+    paellaPlugin: Plugin;
+    children?: ComponentChildren;
+};
+
+const PreactContainer = ({paellaPlugin, children}: PreactContainerProps) => {    
+    return (     
+        <PaellaPluginContext.Provider value={paellaPlugin}>
+            {children}
+        </PaellaPluginContext.Provider>   
+    );
+};
+
+
+export interface AIAgentChatPluginconfig extends InteractiveAreaPluginConfig {
+    // No specific config needed beyond base
+}
+
+export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChatPluginconfig> {
+    private _appRootElement: HTMLDivElement | null = null;
+    private _vectorStore: MemoryVectorStore | null = null;
+    showWelcomeMessage = true;
+
+    getPluginModuleInstance() {
+        return PackagePluginModule.Get();
+    }
+
+    get name() {
+        return 'es.upv.paella.ai.agentChat';
+    }
+
+    async isEnabled(): Promise<boolean> {
+
+        const data = await this.player.data?.read("agentchat.captions", "captions");
+        console.log(`AIAgentChatPlugin.isEnabled: data = ${data}`);
+
+        const enabled = await super.isEnabled();
+        return enabled;
+    }
+
+    async load() { 
+        await this.loadVectorStore();
+        const agent = await this.createAgent();
+        console.log("Agent created:", agent);
+
+        const userQuestion = "Hola";
+        const respuesta = await agent.invoke({
+            messages: [
+                { 
+                    role: "user", 
+                    content: userQuestion 
+                    // content: "usa la tool search_in_class para buscar sobre la RedSara y dime exactamente lo que devuelve la tool, sin inventar nada. No respondas con tu conocimiento general, solo lo que devuelva la tool."
+                }
+            ]
+        });
+
+        // LangChain devuelve un objeto con el historial completo de mensajes.
+        // La respuesta final del agente siempre es el último mensaje del array.
+        const mensajeFinal = respuesta.messages[respuesta.messages.length - 1];
+        console.log("\n🤖 Agente:");
+        console.log(mensajeFinal.content);
+    }
+
+    async getContent(): Promise<HTMLElement> {
+        if (this._appRootElement === null) {
+            this._appRootElement = document.createElement("div");        
+            this._appRootElement.classList.add("AIAgentChatPlugin");
+
+            const ReactNode = await this.getReactNode();
+            
+            render(
+                <PreactContainer paellaPlugin={this} children={ReactNode} />,
+                this._appRootElement
+            );
+        }
+        return this._appRootElement;
+    }
+
+    async getReactNode(): Promise<ComponentChildren> {
+        return (<MainAppContent />);
+    }
+
+
+    async loadVectorStore() {
+        try {
+            await import("@huggingface/transformers")
+            const { RecursiveCharacterTextSplitter } = await import("@langchain/classic/text_splitter");
+            const { MemoryVectorStore } = await import("@langchain/classic/vectorstores/memory");
+            const { HuggingFaceTransformersEmbeddings } = await import("@langchain/community/embeddings/huggingface_transformers");
+
+
+            const rawVttFile = await this.player.data?.read("agentchat.captions", "captions");
+        
+            const cleanText = rawVttFile
+                .replace(/WEBVTT\n\n/g, "") // Elimina la cabecera
+                // .replace(/\d{2}:\d{2}:\d{2}\.\d{3} --> \d{2}:\d{2}:\d{2}\.\d{3}\n/g, "") // Descomenta esto para quitar los timestamps
+                .trim();
+            
+        
+            const splitter = new RecursiveCharacterTextSplitter({
+                chunkSize: 1000,
+                chunkOverlap: 200,
+            });
+
+            const misChunksDeLaClase = await splitter.createDocuments([cleanText]);
+            console.log(`Se han creado ${misChunksDeLaClase.length} chunks de texto.`);
+            console.log("Vectorizando los chunks... (esto puede tardar unos segundos)");
+            const embeddings = new HuggingFaceTransformersEmbeddings({
+                model: "Xenova/all-MiniLM-L6-v2"
+            });
+
+
+            this._vectorStore = new MemoryVectorStore(embeddings);
+            await this._vectorStore.addDocuments(misChunksDeLaClase);
+
+            const resultados = await this._vectorStore.similaritySearchWithScore("prueba", 4);
+            console.log(`Se han encontrado ${resultados.length} resultados similares.`);
+        }
+        catch (error) {
+            console.error("Error al cargar el vector store:", error);
+        }
+
+    }
+
+    async createAgent() {
+        const { tool } = await import("@langchain/core/tools");
+        const { createAgent } = await import("langchain");
+        const { ChatOpenAI } = await import("@langchain/openai");
+        
+        const searchInClassTool = tool(
+            async ({ query }) => {
+                const resultados = await this._vectorStore!.similaritySearchWithScore(query, 5);                
+                const rr = resultados.map((res, i) => {
+                    const doc = res[0];    // El documento (texto y metadatos)
+                    const score = res[1];  // La puntuación de similitud
+    
+                    return `Resultado ${i + 1} (Score: ${score}):\n${doc.pageContent}\n`;
+                });
+    
+                const response = `--- RESULTADOS DE LA BÚSQUEDA ---\n${rr.join("\n")}`;
+                return response;                
+            },
+            {
+                name: "search_in_class",
+                description: "Busca información específica dentro del transcrito o los apuntes de la clase de video actual. Úsala siempre que el usuario pregunte sobre el contenido de la clase.",
+                schema: z.object({
+                    query: z.string().describe("La pregunta o concepto específico que se desea buscar en la clase"),
+                }),
+            }
+        );
+                    
+        const getTotalChunksTool = tool(
+            async () => {
+                const total = this._vectorStore!.memoryVectors.length;
+                return `El documento actual está dividido en ${total} fragmentos (chunks).`;
+            },
+            {
+                name: "get_total_chunks",
+                description: "Devuelve el número total de fragmentos (chunks) en los que se ha dividido la transcripción de la clase actual. Úsala si el usuario pregunta cuántos fragmentos hay o cuál es el tamaño de la base de datos.",
+                schema: z.object({}),
+            }
+        );
+                
+        const getChunkByIndexTool = tool(
+            async ({ index }) => {
+                const total = this._vectorStore!.memoryVectors.length;
+                
+                
+                if (index < 0 || index >= total) {
+                    return `Error: El índice ${index} está fuera de rango. Por favor, pide un índice entre 0 y ${total - 1}.`;
+                }
+                        
+                const chunk = this._vectorStore!.memoryVectors[index];
+                return `--- CONTENIDO DEL CHUNK ${index} ---\n${chunk.content}`;
+            },
+            {
+                name: "get_chunk_by_index",
+                description: "Devuelve el texto exacto de un fragmento (chunk) específico mediante su índice numérico. Úsala si el usuario pide leer un fragmento en particular.",
+                schema: z.object({
+                    index: z.number().int().describe("El índice numérico del fragmento que se desea recuperar. Debe ser un número entero empezando desde 0."),
+                }),
+            }
+        );
+        
+
+        
+
+
+        const systemPrompt = `Eres un asistente virtual de la Universidad Politécnica de Valencia (UPV). Tu objetivo principal es ayudar a los alumnos a resolver dudas sobre el video o la clase que están viendo.
+        
+        Tienes a tu disposición tres herramientas:
+        - 'search_in_class': Para buscar conceptos, temas o detalles dentro del contenido de la clase.
+        - 'get_total_chunks': Para saber en cuántos fragmentos (chunks) está dividida la transcripción.
+        - 'get_chunk_by_index': Para leer el texto exacto de un fragmento concreto.
+        
+        REGLAS ESTRICTAS:
+        1. BÚSQUEDA DE CONTENIDO: Cuando el usuario pregunte sobre cualquier concepto, tema o detalle de la clase, DEBES usar la herramienta 'search_in_class'. 
+        2. CERO ALUCINACIONES: NUNCA inventes información ni respondas basándote en tu conocimiento general si te preguntan sobre el contenido del video. Basa tu respuesta ÚNICAMENTE en la información devuelta por tus herramientas.
+        3. MANEJO DE ERRORES: Si la herramienta de búsqueda devuelve "No se ha encontrado nada", o si un chunk está vacío, dile amablemente al usuario que ese tema no se menciona en el video actual o que el fragmento no contiene información.
+        4. TONO: Responde de manera clara, concisa y en un tono académico y cercano.`;
+        
+
+        const model = new ChatOpenAI({
+            apiKey: "dummy",
+            modelName: "big-pickle",
+            configuration: {
+                baseURL: `${location.origin}/api/opencode/zen/v1`,
+            },
+        });
+
+        const agent = createAgent({
+            model: model,
+            // checkpointer: checkpointer,
+            tools: [
+                searchInClassTool,
+                getTotalChunksTool,
+                getChunkByIndexTool
+            ],
+            systemPrompt: systemPrompt,
+        });
+    
+        return agent;
+    }
+}

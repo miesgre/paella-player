@@ -9,6 +9,18 @@ export default defineConfig({
     devSourcemap: true,
   },
   server: {
+     proxy: {
+      '/api/opencode': {
+        target: 'https://opencode.ai',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/opencode/, ''),
+        configure: (proxy) => {
+        proxy.on('proxyReq', (proxyReq) => {
+          proxyReq.removeHeader('Authorization');
+        });
+      }
+      }
+    },
     sourcemapIgnoreList: () => false,
     fs: {
       allow: [

@@ -2,6 +2,9 @@ import AIContentPlugin, { type AIContentData, type AIContentPluginConfig } from 
 import AIToolsDataTestPlugin from './plugins/es.upv.paella.ai.content.data-test';
 import AIChatPlugin from './plugins/es.upv.paella.ai.chat';
 import RealTimeCaptionsPlugin from './plugins/RealTimeCaptions/es.upv.paella.ai.realTimeCaptions';
+import AIAgentChatButtonPlugin from './plugins/AgentChat/es.upv.paella.ai.agentchat.button';
+import AIAgentChatPlugin from './plugins/AgentChat/es.upv.paella.ai.agentchat';
+import {AIAgentChatDataTestPlugin} from './plugins/AgentChat/es.upv.paella.ai.agentchat.data-test';
 
 export const aiToolsPlugins = [
     {
@@ -30,8 +33,27 @@ export const aiToolsPlugins = [
         config: {
             enabled: false
         }
+    },
+    {
+        plugin: AIAgentChatButtonPlugin,
+        config: {
+            enabled: true
+        }
+    },
+    {
+        plugin: AIAgentChatPlugin,
+        config: {
+            enabled: true,
+            dataContext: "agentchat.captions",
+        }
+    },
+    {
+        plugin: AIAgentChatDataTestPlugin,
+        config: {
+            enabled: true,
+            context: ["agentchat.captions"],
+        }
     }
-
 ];
 
 
