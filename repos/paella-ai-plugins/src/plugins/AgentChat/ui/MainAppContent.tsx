@@ -28,13 +28,13 @@ export const MainAppContent = () => {
     };
 
     return (
-        <div>
+        <>
             { showWelcomeView        
                 ? <ChatWelcome onClick={handleCloseWelcomeView}/>
                 : (vectorStoreLoadingProgress < 1)
                     ? <LoadingPage error={errorLoadingVectorStore} loadingProgress={vectorStoreLoadingProgress*100} />
                     : <AgentChat />
             }
-        </div>
+        </>
         );
 }
