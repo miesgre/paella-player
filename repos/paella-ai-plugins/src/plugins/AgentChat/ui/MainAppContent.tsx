@@ -14,7 +14,7 @@ export const MainAppContent = () => {
     const handleCloseWelcomeView = async () => {
         paellaPlugin.showWelcomeMessage = false;
         setShowWelcomeView(false);
-        paellaPlugin.loadVectorStore(async (err, progress, total) => {
+        await paellaPlugin.loadVectorStoreAndCreateAgent(async (err, progress, total) => {
             setErrorLoadingVectorStore(err ? "Error loading vector store" : null);
             if (err) {
                 console.error("Error loading vector store:", err);                
@@ -24,7 +24,7 @@ export const MainAppContent = () => {
                 setVectorStoreLoadingProgress(progress / total);                                
             }
             await new Promise(resolve => setTimeout(resolve, 0));
-        });        
+        });     
     };
 
     return (

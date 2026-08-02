@@ -8,6 +8,7 @@ import { MainAppContent } from './ui/MainAppContent';
 import PackagePluginModule from '../PackagePluginModule';
 import { z } from "zod";
 import type { MemoryVectorStore } from "@langchain/classic/vectorstores/memory";
+import type { ReactAgent } from 'langchain';
 // import { HuggingFaceTransformersEmbeddings } from "@langchain/community/embeddings/huggingface_transformers";
 
 const PaellaPluginContext = createContext<Plugin | null>(null);
@@ -47,7 +48,8 @@ export interface AIAgentChatPluginconfig extends InteractiveAreaPluginConfig {
 
 export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChatPluginconfig> {
     private _appRootElement: HTMLDivElement | null = null;
-    private _vectorStore: MemoryVectorStore | null = null;    
+    private _vectorStore: MemoryVectorStore | null = null;
+    agent: ReactAgent | null = null;
     showWelcomeMessage = true;
 
     getPluginModuleInstance() {
@@ -278,5 +280,10 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
         });
     
         return agent;
+    }
+
+    async loadVectorStoreAndCreateAgent(progressCallback: LoadVectorStoteProgressCallback = async () => {}) {
+        await this.loadVectorStore(progressCallback);
+        this.agent = await this.createAgent();
     }
 }

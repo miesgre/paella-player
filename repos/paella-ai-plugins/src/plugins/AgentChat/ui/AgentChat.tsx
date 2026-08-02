@@ -7,7 +7,7 @@ import "./AgentChat.css";
 type ChatMessage = { role: string; text: string; processing?: boolean }
 
 export const AgentChat = () => {
-  const paellaPlugin = usePaellaPlugin<AIAgentChatPlugin>();  
+  const paellaPlugin = usePaellaPlugin<AIAgentChatPlugin>();
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState<string>("");
   const [processing, setProcessing] = useState<boolean>(false);
@@ -15,8 +15,6 @@ export const AgentChat = () => {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const listRef = useRef<HTMLUListElement | null>(null);
   const wasAtBottomRef = useRef(true);
-
-  // Foc automatico al montar el componente
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
@@ -39,6 +37,66 @@ export const AgentChat = () => {
     }
   }, [chatMessages]);
 
+  const sendAndProcessMessage = async (userQuestion: string) => {
+    const stream = await paellaPlugin.agent?.streamEvents(
+      { messages: [{ role: "user", content: userQuestion }] },
+      {
+        version: "v3",
+        configurable: {
+          thread_id: "memeory_thread_id",
+        },
+      },
+    );
+
+    if (!stream) {
+      console.error("No stream returned from agent");
+      setProcessing(false);
+      return;
+    }
+
+    let accumulatedText = "";
+
+    const yieldToRender = () => new Promise<void>(resolve => setTimeout(resolve, 0));
+
+    const flushUpdate = async () => {
+      setChatMessages(prev =>
+        prev.map(m => m.processing ? { ...m, text: accumulatedText } : m)
+      );
+      await yieldToRender();
+    };
+
+    try {
+      for await (const message of stream.messages) {
+        for await (const _delta of message.usage) { /* skip */ }
+
+        for await (const delta of message.reasoning) {
+          accumulatedText += delta;
+          await flushUpdate();
+        }
+
+        for await (const delta of message.text) {
+          accumulatedText += delta;
+          await flushUpdate();
+        }
+
+        for await (const delta of message.toolCalls) {
+          const name = delta.name ?? "tool";
+          const args = Object.entries(delta.args ?? {})
+            .map(([k, v]) => `${k}=${JSON.stringify(v)}`)
+            .join(", ");
+          accumulatedText += `\n\`${name}(${args})\`\n`;
+          await flushUpdate();
+        }
+      }
+    } catch (err) {
+      console.error("Stream error:", err);
+      accumulatedText += `\n\nError: ${err}`;
+      await flushUpdate();
+    }
+
+    setProcessing(false);
+  }
+
   const submitMessage = async (e: Event): Promise<void> => {
     e.preventDefault();
     const text = inputMessage.trim();
@@ -47,25 +105,13 @@ export const AgentChat = () => {
     checkIfAtBottom();
 
     const userMessage: ChatMessage = { role: "human", text };
-    const processingMessage: ChatMessage = { role: "system", text: "...", processing: true };
+    const processingMessage: ChatMessage = { role: "system", text: "", processing: true };
 
     setChatMessages(prev => [...prev, userMessage, processingMessage]);
     setInputMessage("");
     setProcessing(true);
 
-    // TODO: replace with real agent call
-    setTimeout(() => {
-      checkIfAtBottom();
-      setChatMessages(prev => {
-        const withoutProcessing = prev.filter(m => !m.processing);
-        const reply: ChatMessage = {
-          role: "system",
-          text: `Esta es una respuesta simulada del agente. Has dicho: "${text}"`,
-        };
-        return [...withoutProcessing, reply];
-      });
-      setProcessing(false);
-    }, 1000);
+    await sendAndProcessMessage(text);
   }
 
   return (    
