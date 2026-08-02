@@ -258,28 +258,17 @@
     word-break: break-word;
 }
 
-/* ── Tools block ── */
-.AIAgentChatPlugin .tools-block {
-    margin-bottom: 0.5rem;
-    border-left: 2px solid var(--highlight-bg-color);
+/* ── Tools inside reasoning block ── */
+.AIAgentChatPlugin .reasoning-tools {
+    margin-top: 0.5rem;
+    padding: 0.4rem 0.6rem;
+    border-left: 3px solid var(--highlight-bg-color);
     border-radius: 0 var(--popup-item-border-radius, 8px) var(--popup-item-border-radius, 8px) 0;
     background: rgb(255 255 255 / 3%);
-}
-
-.AIAgentChatPlugin .tools-label {
-    padding: 0.35rem 0.6rem;
     font-size: var(--small-text-size, 0.7em);
-    font-weight: 600;
-    color: var(--highlight-bg-color);
-}
-
-.AIAgentChatPlugin .tools-body {
-    margin: 0;
-    padding: 0.3rem 0.6rem 0.5rem;
-    font-size: var(--small-text-size, 0.7em);
-    line-height: 1.4;
     font-family: monospace;
     white-space: pre-wrap;
     word-break: break-word;
+    line-height: 1.4;
     color: var(--paella-plugin-agentchat-text-secondary, rgb(235 235 235 / 86%));
 }

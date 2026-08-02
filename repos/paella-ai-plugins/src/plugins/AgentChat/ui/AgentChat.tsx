@@ -5,22 +5,24 @@ import remarkGfm from 'remark-gfm';
 import "./AgentChat.css";
 
 type Segment =
-  | { type: "reasoning"; content: string }
-  | { type: "text"; content: string }
-  | { type: "tools"; content: string };
+  | { type: "reasoning"; text: string }
+  | { type: "tool"; name: string; args: string };
 
 type ChatMessage = {
   role: string;
   segments: Segment[];
+  response: string;
   processing?: boolean;
 }
 
-function ReasoningBlock({ segment, processing }: { segment: Segment; processing?: boolean }) {
+function ReasoningBlock({ segments, processing }: { segments: Segment[]; processing?: boolean }) {
   const [open, setOpen] = useState(true);
 
   useEffect(() => {
     if (!processing) setOpen(false);
   }, [processing]);
+
+  if (!segments.length) return null;
 
   return (
     <details open={open} className="reasoning-block">
@@ -29,19 +31,14 @@ function ReasoningBlock({ segment, processing }: { segment: Segment; processing?
       </summary>
       {open && (
         <div className="reasoning-body">
-          <div className="reasoning-text">{segment.content}</div>
+          {segments.map((seg, i) =>
+            seg.type === "reasoning"
+              ? <div key={i} className="reasoning-text">{seg.text}</div>
+              : <div key={i} className="reasoning-tools">{`Tool: ${seg.name}(${seg.args})`}</div>
+          )}
         </div>
       )}
     </details>
-  );
-}
-
-function ToolsBlock({ segment }: { segment: Segment }) {
-  return (
-    <div className="tools-block">
-      <div className="tools-label">Tool calls</div>
-      <pre className="tools-body">{segment.content}</pre>
-    </div>
   );
 }
 
@@ -93,30 +90,22 @@ export const AgentChat = () => {
 
     const yieldToRender = () => new Promise<void>(resolve => setTimeout(resolve, 0));
 
-    // Segmentos ya terminados + el segmento en progreso por cada tipo
-    const committed: Segment[] = [];
-    let reasoningSeg: Segment = { type: "reasoning", content: "" };
-    let textSeg: Segment = { type: "text", content: "" };
-    let toolsSeg: Segment = { type: "tools", content: "" };
-
-    // Cierra el segmento en progreso: lo muesta a committed y crea uno nuevo vacío
-    const commitSegment = (seg: Segment, factory: () => Segment): Segment => {
-      if (seg.content) committed.push(seg);
-      return factory();
-    };
+    let segments: Segment[] = [];
+    let currentReasoning = "";
+    let currentText = "";
 
     const flushUpdate = async () => {
-      // La lista final = committed + los 3 segmentos en progreso (si tienen contenido)
-      const allSegments = [
-        ...committed,
-        ...(reasoningSeg.content ? [reasoningSeg] : []),
-        ...(toolsSeg.content ? [toolsSeg] : []),
-        ...(textSeg.content ? [textSeg] : []),
-      ];
       setChatMessages(prev =>
-        prev.map(m => m.processing ? { ...m, segments: allSegments } : m)
+        prev.map(m => m.processing ? { ...m, segments, response: currentText } : m)
       );
       await yieldToRender();
+    };
+
+    const flushReasoning = () => {
+      if (currentReasoning) {
+        segments.push({ type: "reasoning", text: currentReasoning });
+        currentReasoning = "";
+      }
     };
 
     try {
@@ -124,18 +113,17 @@ export const AgentChat = () => {
         for await (const _delta of message.usage) { /* skip */ }
 
         for await (const delta of message.reasoning) {
-          // Si habia texto o tools en progreso, commitearlos primero
-          textSeg = commitSegment(textSeg, () => ({ type: "text", content: "" }));
-          toolsSeg = commitSegment(toolsSeg, () => ({ type: "tools", content: "" }));
-          reasoningSeg.content += delta;
+          if (currentText) {
+            flushReasoning();
+            segments.push({ type: "reasoning", text: currentText });
+            currentText = "";
+          }
+          currentReasoning += delta;
           await flushUpdate();
         }
 
         for await (const delta of message.text) {
-          // Si habia reasoning o tools en progreso, commitearlos primero
-          reasoningSeg = commitSegment(reasoningSeg, () => ({ type: "reasoning", content: "" }));
-          toolsSeg = commitSegment(toolsSeg, () => ({ type: "tools", content: "" }));
-          textSeg.content += delta;
+          currentText += delta;
           await flushUpdate();
         }
 
@@ -144,24 +132,23 @@ export const AgentChat = () => {
           const args = Object.entries(delta.args ?? {})
             .map(([k, v]) => `${k}=${JSON.stringify(v)}`)
             .join(", ");
-          // Si habia reasoning o text en progreso, commitearlos primero
-          reasoningSeg = commitSegment(reasoningSeg, () => ({ type: "reasoning", content: "" }));
-          textSeg = commitSegment(textSeg, () => ({ type: "text", content: "" }));
-          toolsSeg.content += `${name}(${args})\n`;
+          if (currentText) {
+            flushReasoning();
+            segments.push({ type: "reasoning", text: currentText });
+            currentText = "";
+          }
+          flushReasoning();
+          segments.push({ type: "tool", name, args });
           await flushUpdate();
         }
       }
     } catch (err) {
       console.error("Stream error:", err);
-      textSeg.content += `\n\nError: ${err}`;
+      currentText += `\n\nError: ${err}`;
       await flushUpdate();
     }
 
-    // Flush final: commitear todo lo que quede en progreso
-    commitSegment(reasoningSeg, () => ({ type: "reasoning", content: "" }));
-    commitSegment(textSeg, () => ({ type: "text", content: "" }));
-    commitSegment(toolsSeg, () => ({ type: "tools", content: "" }));
-
+    // Marcar el mensaje como completado
     setChatMessages(prev =>
       prev.map(m => {
         if (!m.processing) return m;
@@ -179,8 +166,8 @@ export const AgentChat = () => {
 
     checkIfAtBottom();
 
-    const userMessage: ChatMessage = { role: "human", segments: [{ type: "text", content: text }] };
-    const processingMessage: ChatMessage = { role: "system", segments: [], processing: true };
+    const userMessage: ChatMessage = { role: "human", segments: [], response: text };
+    const processingMessage: ChatMessage = { role: "system", segments: [], response: "", processing: true };
 
     setChatMessages(prev => [...prev, userMessage, processingMessage]);
     setInputMessage("");
@@ -223,19 +210,12 @@ export const AgentChat = () => {
                       {msg.role === "human" ? paellaPlugin.player.translate("You") : paellaPlugin.player.translate("Assistant")}
                     </span>
                   </div>
-                  {msg.segments.map((seg, j) => {
-                    if (seg.type === "reasoning") {
-                      return <ReasoningBlock key={j} segment={seg} processing={msg.processing} />;
-                    }
-                    if (seg.type === "tools") {
-                      return <ToolsBlock key={j} segment={seg} />;
-                    }
-                    return (
-                      <Markdown key={j} remarkPlugins={[remarkGfm]}>
-                        {seg.content}
-                      </Markdown>
-                    );
-                  })}
+                  <ReasoningBlock segments={msg.segments} processing={msg.processing} />
+                  {msg.response &&
+                    <Markdown remarkPlugins={[remarkGfm]}>
+                      {msg.response}
+                    </Markdown>
+                  }
                 </div>
               </li>
             )}
