@@ -200,3 +200,86 @@
 .AIAgentChatPlugin .chat-content > article::-webkit-scrollbar-thumb:hover {
     background: var(--paella-plugin-agentchat-text-muted, rgb(210 210 210 / 82%));
 }
+
+/* ── Reasoning / tools expandible ── */
+.AIAgentChatPlugin .reasoning-block {
+    margin-bottom: 0.5rem;
+    border-left: 2px solid var(--main-border-color);
+    border-radius: 0 var(--popup-item-border-radius, 8px) var(--popup-item-border-radius, 8px) 0;
+    background: rgb(255 255 255 / 3%);
+    overflow: hidden;
+}
+
+.AIAgentChatPlugin .reasoning-block[open] {
+    background: rgb(255 255 255 / 3%);
+}
+
+.AIAgentChatPlugin .reasoning-block summary {
+    padding: 0.35rem 0.6rem;
+    font-size: var(--small-text-size, 0.7em);
+    font-weight: 600;
+    color: var(--paella-plugin-agentchat-text-muted, rgb(210 210 210 / 82%));
+    cursor: pointer;
+    user-select: none;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: color 0.15s ease;
+}
+
+.AIAgentChatPlugin .reasoning-block summary::-webkit-details-marker {
+    display: none;
+}
+
+.AIAgentChatPlugin .reasoning-block summary::before {
+    content: "▸";
+    font-size: 0.8em;
+    transition: transform 0.15s ease;
+}
+
+.AIAgentChatPlugin .reasoning-block[open] > summary::before {
+    transform: rotate(90deg);
+}
+
+.AIAgentChatPlugin .reasoning-block summary:hover {
+    color: var(--paella-plugin-agentchat-text-secondary, rgb(235 235 235 / 86%));
+}
+
+.AIAgentChatPlugin .reasoning-body {
+    padding: 0.3rem 0.6rem 0.5rem;
+    font-size: var(--small-text-size, 0.7em);
+    line-height: 1.4;
+    color: var(--paella-plugin-agentchat-text-muted, rgb(210 210 210 / 82%));
+}
+
+.AIAgentChatPlugin .reasoning-text {
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* ── Tools block ── */
+.AIAgentChatPlugin .tools-block {
+    margin-bottom: 0.5rem;
+    border-left: 2px solid var(--highlight-bg-color);
+    border-radius: 0 var(--popup-item-border-radius, 8px) var(--popup-item-border-radius, 8px) 0;
+    background: rgb(255 255 255 / 3%);
+}
+
+.AIAgentChatPlugin .tools-label {
+    padding: 0.35rem 0.6rem;
+    font-size: var(--small-text-size, 0.7em);
+    font-weight: 600;
+    color: var(--highlight-bg-color);
+}
+
+.AIAgentChatPlugin .tools-body {
+    margin: 0;
+    padding: 0.3rem 0.6rem 0.5rem;
+    font-size: var(--small-text-size, 0.7em);
+    line-height: 1.4;
+    font-family: monospace;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: var(--paella-plugin-agentchat-text-secondary, rgb(235 235 235 / 86%));
+}

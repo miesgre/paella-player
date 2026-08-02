@@ -4,7 +4,46 @@ import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import "./AgentChat.css";
 
-type ChatMessage = { role: string; text: string; processing?: boolean }
+type Segment =
+  | { type: "reasoning"; content: string }
+  | { type: "text"; content: string }
+  | { type: "tools"; content: string };
+
+type ChatMessage = {
+  role: string;
+  segments: Segment[];
+  processing?: boolean;
+}
+
+function ReasoningBlock({ segment, processing }: { segment: Segment; processing?: boolean }) {
+  const [open, setOpen] = useState(true);
+
+  useEffect(() => {
+    if (!processing) setOpen(false);
+  }, [processing]);
+
+  return (
+    <details open={open} className="reasoning-block">
+      <summary onClick={(e) => { e.preventDefault(); setOpen(!open); }}>
+        {processing ? "Pensando..." : "Razonamiento"}
+      </summary>
+      {open && (
+        <div className="reasoning-body">
+          <div className="reasoning-text">{segment.content}</div>
+        </div>
+      )}
+    </details>
+  );
+}
+
+function ToolsBlock({ segment }: { segment: Segment }) {
+  return (
+    <div className="tools-block">
+      <div className="tools-label">Tool calls</div>
+      <pre className="tools-body">{segment.content}</pre>
+    </div>
+  );
+}
 
 export const AgentChat = () => {
   const paellaPlugin = usePaellaPlugin<AIAgentChatPlugin>();
@@ -19,7 +58,6 @@ export const AgentChat = () => {
     inputRef.current?.focus();
   }, []);
 
-  // Detectar si el usuario está cerca del fondo del scroll
   const checkIfAtBottom = () => {
     const article = listRef.current?.closest("article");
     if (!article) return;
@@ -28,7 +66,6 @@ export const AgentChat = () => {
     wasAtBottomRef.current = atBottom;
   };
 
-  // Auto-scroll solo si ya estabamos al fondo
   useEffect(() => {
     if (!wasAtBottomRef.current) return;
     const article = listRef.current?.closest("article");
@@ -54,13 +91,30 @@ export const AgentChat = () => {
       return;
     }
 
-    let accumulatedText = "";
-
     const yieldToRender = () => new Promise<void>(resolve => setTimeout(resolve, 0));
 
+    // Segmentos ya terminados + el segmento en progreso por cada tipo
+    const committed: Segment[] = [];
+    let reasoningSeg: Segment = { type: "reasoning", content: "" };
+    let textSeg: Segment = { type: "text", content: "" };
+    let toolsSeg: Segment = { type: "tools", content: "" };
+
+    // Cierra el segmento en progreso: lo muesta a committed y crea uno nuevo vacío
+    const commitSegment = (seg: Segment, factory: () => Segment): Segment => {
+      if (seg.content) committed.push(seg);
+      return factory();
+    };
+
     const flushUpdate = async () => {
+      // La lista final = committed + los 3 segmentos en progreso (si tienen contenido)
+      const allSegments = [
+        ...committed,
+        ...(reasoningSeg.content ? [reasoningSeg] : []),
+        ...(toolsSeg.content ? [toolsSeg] : []),
+        ...(textSeg.content ? [textSeg] : []),
+      ];
       setChatMessages(prev =>
-        prev.map(m => m.processing ? { ...m, text: accumulatedText } : m)
+        prev.map(m => m.processing ? { ...m, segments: allSegments } : m)
       );
       await yieldToRender();
     };
@@ -70,12 +124,18 @@ export const AgentChat = () => {
         for await (const _delta of message.usage) { /* skip */ }
 
         for await (const delta of message.reasoning) {
-          accumulatedText += delta;
+          // Si habia texto o tools en progreso, commitearlos primero
+          textSeg = commitSegment(textSeg, () => ({ type: "text", content: "" }));
+          toolsSeg = commitSegment(toolsSeg, () => ({ type: "tools", content: "" }));
+          reasoningSeg.content += delta;
           await flushUpdate();
         }
 
         for await (const delta of message.text) {
-          accumulatedText += delta;
+          // Si habia reasoning o tools en progreso, commitearlos primero
+          reasoningSeg = commitSegment(reasoningSeg, () => ({ type: "reasoning", content: "" }));
+          toolsSeg = commitSegment(toolsSeg, () => ({ type: "tools", content: "" }));
+          textSeg.content += delta;
           await flushUpdate();
         }
 
@@ -84,17 +144,24 @@ export const AgentChat = () => {
           const args = Object.entries(delta.args ?? {})
             .map(([k, v]) => `${k}=${JSON.stringify(v)}`)
             .join(", ");
-          accumulatedText += `\n\`${name}(${args})\`\n`;
+          // Si habia reasoning o text en progreso, commitearlos primero
+          reasoningSeg = commitSegment(reasoningSeg, () => ({ type: "reasoning", content: "" }));
+          textSeg = commitSegment(textSeg, () => ({ type: "text", content: "" }));
+          toolsSeg.content += `${name}(${args})\n`;
           await flushUpdate();
         }
       }
     } catch (err) {
       console.error("Stream error:", err);
-      accumulatedText += `\n\nError: ${err}`;
+      textSeg.content += `\n\nError: ${err}`;
       await flushUpdate();
     }
 
-    // Marcar el mensaje como completado (quitar processing para que cambie el icono)
+    // Flush final: commitear todo lo que quede en progreso
+    commitSegment(reasoningSeg, () => ({ type: "reasoning", content: "" }));
+    commitSegment(textSeg, () => ({ type: "text", content: "" }));
+    commitSegment(toolsSeg, () => ({ type: "tools", content: "" }));
+
     setChatMessages(prev =>
       prev.map(m => {
         if (!m.processing) return m;
@@ -112,8 +179,8 @@ export const AgentChat = () => {
 
     checkIfAtBottom();
 
-    const userMessage: ChatMessage = { role: "human", text };
-    const processingMessage: ChatMessage = { role: "system", text: "", processing: true };
+    const userMessage: ChatMessage = { role: "human", segments: [{ type: "text", content: text }] };
+    const processingMessage: ChatMessage = { role: "system", segments: [], processing: true };
 
     setChatMessages(prev => [...prev, userMessage, processingMessage]);
     setInputMessage("");
@@ -122,7 +189,7 @@ export const AgentChat = () => {
     await sendAndProcessMessage(text);
   }
 
-  return (    
+  return (
     <div className="chat-content">
       <article>
         <ul ref={listRef}>
@@ -155,16 +222,20 @@ export const AgentChat = () => {
                     <span className="user">
                       {msg.role === "human" ? paellaPlugin.player.translate("You") : paellaPlugin.player.translate("Assistant")}
                     </span>
-                    {/* <span className="time">11:46</span> */}
                   </div>
-                  {/* <MarkdownView className='markdown-view'
-                                                                    markdown={msg.text}
-                                                                    options={{ tables: true, emoji: true }}                                                            
-                                                                /> */}
-                  <Markdown remarkPlugins={[remarkGfm]}>
-                    {msg.text}
-                  </Markdown>
-
+                  {msg.segments.map((seg, j) => {
+                    if (seg.type === "reasoning") {
+                      return <ReasoningBlock key={j} segment={seg} processing={msg.processing} />;
+                    }
+                    if (seg.type === "tools") {
+                      return <ToolsBlock key={j} segment={seg} />;
+                    }
+                    return (
+                      <Markdown key={j} remarkPlugins={[remarkGfm]}>
+                        {seg.content}
+                      </Markdown>
+                    );
+                  })}
                 </div>
               </li>
             )}
@@ -181,6 +252,6 @@ export const AgentChat = () => {
           </button>
         </form>
       </footer>
-    </div>    
+    </div>
   );
 };
