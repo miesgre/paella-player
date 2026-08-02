@@ -248,7 +248,7 @@
 
 .AIAgentChatPlugin .reasoning-body {
     padding: 0.3rem 0.6rem 0.5rem;
-    font-size: var(--small-text-size, 0.7em);
+    font-size: var(--medium-text-size, 0.9em);
     line-height: 1.4;
     color: var(--paella-plugin-agentchat-text-muted, rgb(210 210 210 / 82%));
 }
@@ -265,7 +265,7 @@
     border-left: 3px solid var(--highlight-bg-color);
     border-radius: 0 var(--popup-item-border-radius, 8px) var(--popup-item-border-radius, 8px) 0;
     background: rgb(255 255 255 / 3%);
-    font-size: var(--small-text-size, 0.7em);
+    /* font-size: var(--small-text-size, 0.7em); */
     font-family: monospace;
     white-space: pre-wrap;
     word-break: break-word;
