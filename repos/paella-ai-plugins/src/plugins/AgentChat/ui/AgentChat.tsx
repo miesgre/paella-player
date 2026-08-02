@@ -16,6 +16,11 @@ export const AgentChat = () => {
   const listRef = useRef<HTMLUListElement | null>(null);
   const wasAtBottomRef = useRef(true);
 
+  // Foc automatico al montar el componente
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
   // Detectar si el usuario está cerca del fondo del scroll
   const checkIfAtBottom = () => {
     const article = listRef.current?.closest("article");
@@ -47,9 +52,6 @@ export const AgentChat = () => {
     setChatMessages(prev => [...prev, userMessage, processingMessage]);
     setInputMessage("");
     setProcessing(true);
-
-    // Reenfocar el input tras el re-render
-    queueMicrotask(() => inputRef.current?.focus());
 
     // TODO: replace with real agent call
     setTimeout(() => {
@@ -116,7 +118,7 @@ export const AgentChat = () => {
       </article>
       <footer>
         <form onSubmit={submitMessage}>
-          <input ref={inputRef} type="text" value={inputMessage} title={paellaPlugin.player.translate("Type your message here")} onChange={(e) => setInputMessage(e.currentTarget.value)} disabled={processing} />
+          <input ref={inputRef} type="text" value={inputMessage} title={paellaPlugin.player.translate("Type your message here")} onChange={(e) => setInputMessage(e.currentTarget.value)} />
           <button type="submit" disabled={processing}>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" width="16" height="16" strokeWidth="2">
               <path d="M15 10l-4 4l6 6l4 -16l-18 7l4 2l2 6l3 -4"></path>
