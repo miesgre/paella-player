@@ -94,6 +94,14 @@ export const AgentChat = () => {
       await flushUpdate();
     }
 
+    // Marcar el mensaje como completado (quitar processing para que cambie el icono)
+    setChatMessages(prev =>
+      prev.map(m => {
+        if (!m.processing) return m;
+        const { processing: _, ...done } = m;
+        return done;
+      })
+    );
     setProcessing(false);
   }
 
