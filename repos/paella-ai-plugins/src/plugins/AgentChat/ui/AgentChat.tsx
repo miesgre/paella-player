@@ -14,15 +14,56 @@ export const AgentChat = () => {
 
   const inputRef = useRef<HTMLInputElement | null>(null);
   const listRef = useRef<HTMLUListElement | null>(null);
+  const wasAtBottomRef = useRef(true);
+
+  // Detectar si el usuario está cerca del fondo del scroll
+  const checkIfAtBottom = () => {
+    const article = listRef.current?.closest("article");
+    if (!article) return;
+    const threshold = 50;
+    const atBottom = article.scrollHeight - article.scrollTop - article.clientHeight < threshold;
+    wasAtBottomRef.current = atBottom;
+  };
+
+  // Auto-scroll solo si ya estabamos al fondo
+  useEffect(() => {
+    if (!wasAtBottomRef.current) return;
+    const article = listRef.current?.closest("article");
+    if (article) {
+      article.scrollTop = article.scrollHeight;
+    }
+  }, [chatMessages]);
 
   const submitMessage = async (e: Event): Promise<void> => {
     e.preventDefault();
+    const text = inputMessage.trim();
+    if (!text || processing) return;
 
-    const newMessage: ChatMessage = { role: "human", text: inputMessage };
-    setChatMessages([...chatMessages, newMessage]);
+    checkIfAtBottom();
+
+    const userMessage: ChatMessage = { role: "human", text };
+    const processingMessage: ChatMessage = { role: "system", text: "...", processing: true };
+
+    setChatMessages(prev => [...prev, userMessage, processingMessage]);
     setInputMessage("");
     setProcessing(true);
-    console.log("submitMessage called");
+
+    // Reenfocar el input tras el re-render
+    queueMicrotask(() => inputRef.current?.focus());
+
+    // TODO: replace with real agent call
+    setTimeout(() => {
+      checkIfAtBottom();
+      setChatMessages(prev => {
+        const withoutProcessing = prev.filter(m => !m.processing);
+        const reply: ChatMessage = {
+          role: "system",
+          text: `Esta es una respuesta simulada del agente. Has dicho: "${text}"`,
+        };
+        return [...withoutProcessing, reply];
+      });
+      setProcessing(false);
+    }, 1000);
   }
 
   return (    
