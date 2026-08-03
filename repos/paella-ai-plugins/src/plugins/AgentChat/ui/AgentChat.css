@@ -272,3 +272,29 @@
     line-height: 1.4;
     color: var(--paella-plugin-agentchat-text-secondary, rgb(235 235 235 / 86%));
 }
+
+/* ── Chat response (rendered HTML) ── */
+.AIAgentChatPlugin .chat-response {
+    & > p {
+        margin: 0 0 0.5rem;
+    }
+    & > p:last-child {
+        margin-bottom: 0;
+    }
+    & strong {
+        font-weight: 700;
+    }
+}
+
+/* ── Timestamp links ── */
+.AIAgentChatPlugin .timestamp-link {
+    color: var(--highlight-bg-color);
+    text-decoration: underline;
+    cursor: pointer;
+    font-family: monospace;
+    font-weight: 600;
+}
+
+.AIAgentChatPlugin .timestamp-link:hover {
+    opacity: 0.8;
+}

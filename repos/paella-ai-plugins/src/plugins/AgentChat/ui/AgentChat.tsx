@@ -1,8 +1,19 @@
 import AIAgentChatPlugin, { usePaellaPlugin } from "../es.upv.paella.ai.agentchat"
 import { useState, useRef, useEffect } from 'preact/hooks';
-import Markdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import { marked } from 'marked';
 import "./AgentChat.css";
+
+marked.setOptions({ gfm: true, breaks: true });
+
+const TS = /\d{1,2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?/g;
+
+function formatMarkdown(text: string): string {
+  let html = marked.parse(text) as string;
+  html = html.replace(TS, (m) =>
+    `<a class="timestamp-link" href="#" data-ts="${m}">${m}</a>`
+  );
+  return html;
+}
 
 type Segment =
   | { type: "reasoning"; text: string }
@@ -93,12 +104,24 @@ export const AgentChat = () => {
     let segments: Segment[] = [];
     let currentReasoning = "";
     let currentText = "";
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
-    const flushUpdate = async () => {
+    const doFlush = () => {
       setChatMessages(prev =>
         prev.map(m => m.processing ? { ...m, segments, response: currentText } : m)
       );
+    };
+
+    const flushUpdate = async () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(doFlush, 100);
       await yieldToRender();
+    };
+
+    const flushImmediate = () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = null;
+      doFlush();
     };
 
     const flushReasoning = () => {
@@ -145,8 +168,11 @@ export const AgentChat = () => {
     } catch (err) {
       console.error("Stream error:", err);
       currentText += `\n\nError: ${err}`;
-      await flushUpdate();
+      flushImmediate();
     }
+
+    // Flush final sin debounce
+    flushImmediate();
 
     // Marcar el mensaje como completado
     setChatMessages(prev =>
@@ -175,6 +201,23 @@ export const AgentChat = () => {
 
     await sendAndProcessMessage(text);
   }
+
+  const handleTimestampClick = (ts: string) => alert(`Timestamp: ${ts}`);
+
+  const responseRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = responseRef.current;
+    if (!el) return;
+    const handler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.classList.contains("timestamp-link")) {
+        e.preventDefault();
+        handleTimestampClick(target.dataset.ts ?? target.textContent ?? "");
+      }
+    };
+    el.addEventListener("click", handler);
+    return () => el.removeEventListener("click", handler);
+  }, [chatMessages]);
 
   return (
     <div className="chat-content">
@@ -212,9 +255,11 @@ export const AgentChat = () => {
                   </div>
                   <ReasoningBlock segments={msg.segments} processing={msg.processing} />
                   {msg.response &&
-                    <Markdown remarkPlugins={[remarkGfm]}>
-                      {msg.response}
-                    </Markdown>
+                    <div
+                      ref={responseRef}
+                      className="chat-response"
+                      dangerouslySetInnerHTML={{ __html: formatMarkdown(msg.response) }}
+                    />
                   }
                 </div>
               </li>
