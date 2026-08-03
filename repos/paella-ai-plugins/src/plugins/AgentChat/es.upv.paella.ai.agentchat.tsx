@@ -1,15 +1,10 @@
-import {
-    Plugin, Events, bindEvent, InteractiveAreaPlugin,
-    type InteractiveAreaPluginConfig
-} from '@asicupv/paella-core'
-import { createContext, render, type ComponentChildren, type RefObject } from 'preact';
-import { useContext, useRef } from 'preact/hooks';
+import { Plugin, InteractiveAreaPlugin, type InteractiveAreaPluginConfig } from '@asicupv/paella-core'
+import { createContext, render, type ComponentChildren } from 'preact';
+import { useContext } from 'preact/hooks';
 import { MainAppContent } from './ui/MainAppContent';
 import PackagePluginModule from '../PackagePluginModule';
-import { z } from "zod";
 import type { MemoryVectorStore } from "@langchain/classic/vectorstores/memory";
 import type { ReactAgent } from 'langchain';
-// import { HuggingFaceTransformersEmbeddings } from "@langchain/community/embeddings/huggingface_transformers";
 
 const PaellaPluginContext = createContext<Plugin | null>(null);
 
@@ -43,7 +38,14 @@ export type LoadVectorStoteProgressCallback = (err: Error | null, progress: numb
 
 
 export interface AIAgentChatPluginconfig extends InteractiveAreaPluginConfig {
-    // No specific config needed beyond base
+    dataContext?: string; // Optional context for the data source
+    agentName?: string; // Optional name for the agent
+    topK?: number; // Optional number of top results to retrieve from the vector store
+
+    allowModelUserSelection?: boolean; // Optional flag to allow users to select the model/provider
+    modelName?: string; // Optional name of the model to use
+    baseURL?: string; // Optional base URL for the API
+    contextWindowSize?: number; // Optional size of the context window
 }
 
 export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChatPluginconfig> {
@@ -60,64 +62,37 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
         return 'es.upv.paella.ai.agentChat';
     }
 
-    async isEnabled(): Promise<boolean> {
-
-        const data = await this.player.data?.read("agentchat.captions", "captions");
-        console.log(`AIAgentChatPlugin.isEnabled: data = ${data}`);
-
-        const enabled = await super.isEnabled();
-        return enabled;
+    get agentName() {
+        return this.config.agentName || "AI Assistant";
     }
 
-    async load() { 
-        // await this.loadVectorStore((err, progress, total) => {
-        //     if (err) {
-        //         console.error("Error loading vector store:", err);
-        //     }
-        //     else {
-        //         console.log(`Vector store loading progress: ${progress}/${total}`);
-        //     }
-        // });
-        // const agent = await this.createAgent();
-        // console.log("Agent created:", agent);
+    get dataContext() {
+        return this.config.dataContext || "agentchat.captions";
+    }
 
-        // const userQuestion = "Dime los conceptos mas importantes de la clase y en que instante se discuten.";
-        // const respuesta = await agent.invoke({
-        //     messages: [
-        //         { 
-        //             role: "user", 
-        //             content: userQuestion                    
-        //         }
-        //     ]
-        // }, { 
-        //     configurable: { 
-        //         thread_id: "memory_thread_id" 
-        //     } 
-        // });
+    get topK() {
+        return this.config.topK || 5;
+    }
+    
+    get modelName() {
+        return this.config.modelName || "big-pickle";
+    }
 
-        // // LangChain devuelve un objeto con el historial completo de mensajes.
-        // // La respuesta final del agente siempre es el último mensaje del array.
-        // const mensajeFinal = respuesta.messages[respuesta.messages.length - 1];
-        // console.log(respuesta.messages);
-        // console.log("\n🤖 Agente:");
-        // console.log(mensajeFinal.content);
+    get baseURL() {
+        return this.config.baseURL || `${location.origin}/api/opencode/zen/v1`;
+    }
 
+    get contextWindowSize() {
+        return this.config.contextWindowSize || 2000;
+    }
 
+    async isEnabled(): Promise<boolean> {
+        const data = await this.player.data?.read(this.dataContext, "captions");
+        console.log(`AIAgentChatPlugin.isEnabled: data = ${data}`);
 
-
-        // const respuesta2 = await agent.invoke({
-        //     messages: [{ role: "user",  content: "Que te acabo de preguntar?" }]
-        // }, { 
-        //     configurable: { 
-        //         thread_id: "memory_thread_id" 
-        //     } 
-        // });
-
-        // // LangChain devuelve un objeto con el historial completo de mensajes.
-        // // La respuesta final del agente siempre es el último mensaje del array.
-        // const mensajeFinal2 = respuesta2.messages[respuesta2.messages.length - 1];
-        // console.log("\n🤖 Agente:");
-        // console.log(mensajeFinal2.content);
+        // TODO: check REST endpoint 
+        const enabled = await super.isEnabled();
+        return enabled;
     }
 
     async getContent(): Promise<HTMLElement> {
@@ -154,7 +129,7 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
 
 
 
-            const rawVttFile = await this.player.data?.read("agentchat.captions", "captions");        
+            const rawVttFile = await this.player.data?.read(this.dataContext, "captions");        
             const cleanText = rawVttFile
                 .replace(/WEBVTT\n\n/g, "") // Elimina la cabecera
                 // .replace(/\d{2}:\d{2}:\d{2}\.\d{3} --> \d{2}:\d{2}:\d{2}\.\d{3}\n/g, "") // Descomenta esto para quitar los timestamps
@@ -171,7 +146,6 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
             for (const [index, chunk] of videoChunks.entries()) {                
                 await this._vectorStore.addDocuments([chunk]);
                 await progressCallback(null, index + 1, videoChunks.length);
-                // await new Promise(resolve => setTimeout(resolve, 0));
             }            
         }
         catch (error) {            
@@ -185,6 +159,7 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
         const { createAgent } = await import("langchain");
         const { ChatOpenAI } = await import("@langchain/openai");
         const { MemorySaver } = await import("@langchain/langgraph");
+        const { z } = await import("zod");
         
         const searchInClassTool = tool(
             async ({ query }) => {
@@ -240,9 +215,6 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
                 }),
             }
         );
-        
-
-        
 
 
         const systemPrompt = `Eres un asistente virtual de la Universidad Politécnica de Valencia (UPV). Tu objetivo principal es ayudar a los alumnos a resolver dudas sobre el video o la clase que están viendo.
