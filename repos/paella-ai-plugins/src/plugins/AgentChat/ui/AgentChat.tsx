@@ -104,24 +104,12 @@ export const AgentChat = () => {
     let segments: Segment[] = [];
     let currentReasoning = "";
     let currentText = "";
-    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
-    const doFlush = () => {
+    const flushUpdate = async () => {
       setChatMessages(prev =>
         prev.map(m => m.processing ? { ...m, segments, response: currentText } : m)
       );
-    };
-
-    const flushUpdate = async () => {
-      if (debounceTimer) clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(doFlush, 100);
       await yieldToRender();
-    };
-
-    const flushImmediate = () => {
-      if (debounceTimer) clearTimeout(debounceTimer);
-      debounceTimer = null;
-      doFlush();
     };
 
     const flushReasoning = () => {
@@ -168,11 +156,11 @@ export const AgentChat = () => {
     } catch (err) {
       console.error("Stream error:", err);
       currentText += `\n\nError: ${err}`;
-      flushImmediate();
+      await flushUpdate();
     }
 
-    // Flush final sin debounce
-    flushImmediate();
+    // Flush final
+    await flushUpdate();
 
     // Marcar el mensaje como completado
     setChatMessages(prev =>
