@@ -210,7 +210,7 @@ export const AgentChat = () => {
   }, [chatMessages]);
 
   if (showSettings) {
-    return <UserSettings />;
+    return <UserSettings settings={paellaPlugin.settings} onClose={() => setShowSettings(false)} />;
   }
 
   return (
