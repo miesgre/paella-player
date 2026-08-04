@@ -1,10 +1,10 @@
 import { useState } from 'preact/hooks';
-import "./ChatSettings.css";
+import "./UserSettings.css";
 import {usePaellaPlugin, type Settings} from "../es.upv.paella.ai.agentchat"
 
 
 
-interface ChatSettingsProps {
+interface UserSettingsProps {
     settings: Settings;
     onSettingsChange?: (settings: Settings) => void;
     onSettingsDefault?: () => void;
@@ -12,7 +12,7 @@ interface ChatSettingsProps {
 }
 
 
-export function ChatSettings() {
+export function UserSettings() {
     return (
         <div>Hola</div>
     );

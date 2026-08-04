@@ -1,6 +1,7 @@
 import AIAgentChatPlugin, { usePaellaPlugin } from "../es.upv.paella.ai.agentchat"
 import { useState, useRef, useEffect } from 'preact/hooks';
 import { marked } from 'marked';
+import { UserSettings } from "./UserSettings";
 import "./AgentChat.css";
 
 marked.setOptions({ gfm: true, breaks: true });
@@ -58,6 +59,7 @@ export const AgentChat = () => {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState<string>("");
   const [processing, setProcessing] = useState<boolean>(false);
+  const [showSettings, setShowSettings] = useState<boolean>(false);
 
   const inputRef = useRef<HTMLInputElement | null>(null);
   const listRef = useRef<HTMLUListElement | null>(null);
@@ -207,6 +209,10 @@ export const AgentChat = () => {
     return () => el.removeEventListener("click", handler);
   }, [chatMessages]);
 
+  if (showSettings) {
+    return <UserSettings />;
+  }
+
   return (
     <div className="chat-content">
       <article>
@@ -263,7 +269,7 @@ export const AgentChat = () => {
             </svg>
             {paellaPlugin.player.translate("Send")}
           </button>
-          <button type="button" disabled={processing} >
+          <button type="button" disabled={processing} onClick={() => setShowSettings(true)}>
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" class="lucide lucide-settings2-icon lucide-settings-2"><path d="M14 17H5"/><path d="M19 7h-9"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></svg>
             {paellaPlugin.player.translate("Settings")}
           </button>
