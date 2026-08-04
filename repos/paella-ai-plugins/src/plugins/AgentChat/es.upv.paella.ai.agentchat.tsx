@@ -35,17 +35,26 @@ export type LoadVectorStoteProgressCallback = (err: Error | null, progress: numb
 
 
 
-
+export interface Settings {
+    modelType: 'webllm' | 'openai';
+    baseURL: string;
+    apiKey: string;
+    modelName: string;
+    contextWindowLength: number;
+    // temperature?: number;
+    // maxTokens?: number;
+    // frequecyPenalty?: number;
+    // presencePenalty?: number;
+    // systemPrompt?: string;
+}
 
 export interface AIAgentChatPluginconfig extends InteractiveAreaPluginConfig {
     dataContext?: string; // Optional context for the data source
     agentName?: string; // Optional name for the agent
     topK?: number; // Optional number of top results to retrieve from the vector store
 
-    allowModelUserSelection?: boolean; // Optional flag to allow users to select the model/provider
-    modelName?: string; // Optional name of the model to use
-    baseURL?: string; // Optional base URL for the API
-    contextWindowSize?: number; // Optional size of the context window
+    settings?: Partial<Settings>; // Settings for the agent
+    allowCustomUserSettings?: boolean; // Optional flag to allow users to select the model/provider
 }
 
 export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChatPluginconfig> {
@@ -73,17 +82,22 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
     get topK() {
         return this.config.topK || 5;
     }
-    
-    get modelName() {
-        return this.config.modelName || "big-pickle";
-    }
 
-    get baseURL() {
-        return this.config.baseURL || `${location.origin}/api/opencode/zen/v1`;
-    }
+    get settings(): Settings {
+        // TODO: Read User settings from localStorage or other storage if allowCustomUserSettings is true
+        const modelType = this.config.settings?.modelType || 'openai';
+        const baseURL = this.config.settings?.baseURL || `${location.origin}/api/opencode/zen/v1`;
+        const apiKey = this.config.settings?.apiKey || "dummy";
+        const modelName = this.config.settings?.modelName || 'big-pickle';
+        const contextWindowLength = this.config.settings?.contextWindowLength || 100_000;
 
-    get contextWindowSize() {
-        return this.config.contextWindowSize || 2000;
+        return {
+            modelType,
+            baseURL,
+            apiKey,
+            modelName,
+            contextWindowLength
+        };
     }
 
     async isEnabled(): Promise<boolean> {
@@ -236,6 +250,7 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
             modelName: "big-pickle",
             configuration: {
                 baseURL: `${location.origin}/api/opencode/zen/v1`,
+                // contextWindowSize: this.contextWindowSize
             },
         });
 
