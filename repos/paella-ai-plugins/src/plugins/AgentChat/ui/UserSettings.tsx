@@ -1,5 +1,6 @@
 import { useState } from 'preact/hooks';
 import { usePaellaPlugin, type Settings } from "../es.upv.paella.ai.agentchat";
+import type AIAgentChatPlugin from "../es.upv.paella.ai.agentchat";
 import "./UserSettings.css";
 
 interface UserSettingsProps {
@@ -8,13 +9,25 @@ interface UserSettingsProps {
 }
 
 export function UserSettings({ settings, onClose = () => {} }: UserSettingsProps) {
-    const paellaPlugin = usePaellaPlugin();
+    const paellaPlugin = usePaellaPlugin<AIAgentChatPlugin>();
 
     const [modelType, setModelType] = useState<Settings['modelType']>(settings.modelType);
     const [baseURL, setBaseURL] = useState(settings.baseURL);
     const [apiKey, setApiKey] = useState(settings.apiKey);
     const [modelName, setModelName] = useState(settings.modelName);
     const [contextWindowLength, setContextWindowLength] = useState(settings.contextWindowLength);
+
+    const handleSave = () => {
+        const newSettings: Settings = {
+            modelType,
+            baseURL,
+            apiKey,
+            modelName,
+            contextWindowLength,
+        };
+        paellaPlugin.updateSettings(newSettings);
+        onClose();
+    };
 
     return (
         <div className="settings">
@@ -74,7 +87,10 @@ export function UserSettings({ settings, onClose = () => {} }: UserSettingsProps
 
             <footer className="settings-footer">
                 <button type="button" onClick={onClose}>
-                    {paellaPlugin.player.translate("Close")}
+                    {paellaPlugin.player.translate("Cancel")}
+                </button>
+                <button type="button" className="settings-save" onClick={handleSave}>
+                    {paellaPlugin.player.translate("Save settings")}
                 </button>
             </footer>
         </div>

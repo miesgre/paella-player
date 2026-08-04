@@ -111,6 +111,7 @@
 .AIAgentChatPlugin .settings-footer {
     display: flex;
     justify-content: flex-end;
+    gap: 0.5rem;
     padding: 1rem 0;
 }
 
@@ -128,4 +129,14 @@
 .AIAgentChatPlugin .settings-footer button:hover {
     background: var(--highlight-bg-color-hover);
     transform: scale(1.02);
+}
+
+.AIAgentChatPlugin .settings-footer .settings-save {
+    background: var(--highlight-bg-color);
+    color: var(--popup-item-font-color, #fff);
+    border-color: var(--highlight-bg-color);
+}
+
+.AIAgentChatPlugin .settings-footer .settings-save:hover {
+    opacity: 0.9;
 }

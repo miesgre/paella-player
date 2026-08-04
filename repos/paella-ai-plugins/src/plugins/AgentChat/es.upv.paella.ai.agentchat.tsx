@@ -60,6 +60,7 @@ export interface AIAgentChatPluginconfig extends InteractiveAreaPluginConfig {
 export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChatPluginconfig> {
     private _appRootElement: HTMLDivElement | null = null;
     private _vectorStore: MemoryVectorStore | null = null;
+    private _userSettings: Settings | null = null;
     agent: ReactAgent | null = null;
     showWelcomeMessage = true;
 
@@ -84,7 +85,9 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
     }
 
     get settings(): Settings {
-        // TODO: Read User settings from localStorage or other storage if allowCustomUserSettings is true
+        if (this._userSettings) {
+            return this._userSettings;
+        }
         const modelType = this.config.settings?.modelType || 'openai';
         const baseURL = this.config.settings?.baseURL || `${location.origin}/api/opencode/zen/v1`;
         const apiKey = this.config.settings?.apiKey || "dummy";
@@ -98,6 +101,13 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
             modelName,
             contextWindowLength
         };
+    }
+
+    async updateSettings(newSettings: Settings): Promise<void> {
+        console.log("Updating settings:", newSettings);
+        this._userSettings = { ...newSettings };
+        this.agent = await this.createAgent();
+        console.log("Agent recreated with new settings");
     }
 
     async isEnabled(): Promise<boolean> {
@@ -245,12 +255,12 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
         4. TONO: Responde de manera clara, concisa y en un tono académico y cercano.`;
         
 
+        const settings = this.settings;
         const model = new ChatOpenAI({
-            apiKey: "dummy",
-            modelName: "big-pickle",
+            apiKey: settings.apiKey,
+            modelName: settings.modelName,
             configuration: {
-                baseURL: `${location.origin}/api/opencode/zen/v1`,
-                // contextWindowSize: this.contextWindowSize
+                baseURL: settings.baseURL,
             },
         });
 
