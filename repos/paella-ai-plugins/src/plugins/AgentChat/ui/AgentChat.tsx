@@ -164,7 +164,7 @@ export const AgentChat = () => {
     // Flush final
     await flushUpdate();
 
-    // Marcar el mensaje como completado
+    // Mark message as completed
     setChatMessages(prev =>
       prev.map(m => {
         if (!m.processing) return m;

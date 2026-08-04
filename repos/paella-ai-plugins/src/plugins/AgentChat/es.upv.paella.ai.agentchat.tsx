@@ -68,6 +68,15 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
         return PackagePluginModule.Get();
     }
 
+    getAriaLabel() {
+        return this.player.translate('AI Agent Chat bot');
+    }
+
+    getDescription() {
+        return this.getAriaLabel();
+    }
+
+
     get name() {
         return 'es.upv.paella.ai.agentChat';
     }
@@ -84,10 +93,23 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
         return this.config.topK || 5;
     }
 
+    get allowCustomUserSettings() {
+        return this.config.allowCustomUserSettings ?? true;
+    }
+    
     get settings(): Settings {
         if (this._userSettings) {
             return this._userSettings;
         }
+
+        if (this.allowCustomUserSettings) {
+            const stored = localStorage.getItem(`${this.name}_settings`);
+            if (stored) {
+                this._userSettings = JSON.parse(stored) as Settings;
+                return this._userSettings;
+            }
+        }
+
         const modelType = this.config.settings?.modelType || 'openai';
         const baseURL = this.config.settings?.baseURL || `${location.origin}/api/opencode/zen/v1`;
         const apiKey = this.config.settings?.apiKey || "dummy";
@@ -104,10 +126,11 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
     }
 
     async updateSettings(newSettings: Settings): Promise<void> {
-        console.log("Updating settings:", newSettings);
         this._userSettings = { ...newSettings };
+        if (this.allowCustomUserSettings) {
+            localStorage.setItem(`${this.name}_settings`, JSON.stringify(newSettings));
+        }
         this.agent = await this.createAgent();
-        console.log("Agent recreated with new settings");
     }
 
     async isEnabled(): Promise<boolean> {
@@ -155,8 +178,8 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
 
             const rawVttFile = await this.player.data?.read(this.dataContext, "captions");        
             const cleanText = rawVttFile
-                .replace(/WEBVTT\n\n/g, "") // Elimina la cabecera
-                // .replace(/\d{2}:\d{2}:\d{2}\.\d{3} --> \d{2}:\d{2}:\d{2}\.\d{3}\n/g, "") // Descomenta esto para quitar los timestamps
+                .replace(/WEBVTT\n\n/g, "") // Remove VTT header
+                // .replace(/\d{2}:\d{2}:\d{2}\.\d{3} --> \d{2}:\d{2}:\d{2}\.\d{3}\n/g, "") // Uncomment to strip timestamps
                 .trim();
             
             const splitter = new RecursiveCharacterTextSplitter({
@@ -187,22 +210,22 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
         
         const searchInClassTool = tool(
             async ({ query }) => {
-                const resultados = await this._vectorStore!.similaritySearchWithScore(query, 5);                
-                const rr = resultados.map((res, i) => {
-                    const doc = res[0];    // El documento (texto y metadatos)
-                    const score = res[1];  // La puntuación de similitud
+                const results = await this._vectorStore!.similaritySearchWithScore(query, 5);                
+                const formatted = results.map((res, i) => {
+                    const doc = res[0];    // The document (text and metadata)
+                    const score = res[1];  // The similarity score
     
-                    return `Resultado ${i + 1} (Score: ${score}):\n${doc.pageContent}\n`;
+                    return `Result ${i + 1} (Score: ${score}):\n${doc.pageContent}\n`;
                 });
     
-                const response = `--- RESULTADOS DE LA BÚSQUEDA ---\n${rr.join("\n")}`;
+                const response = `--- SEARCH RESULTS ---\n${formatted.join("\n")}`;
                 return response;                
             },
             {
                 name: "search_in_class",
-                description: "Busca información específica dentro del transcrito o los apuntes de la clase de video actual. Úsala siempre que el usuario pregunte sobre el contenido de la clase.",
+                description: "Search for specific information within the transcript or notes of the current video class. Always use it when the user asks about the class content.",
                 schema: z.object({
-                    query: z.string().describe("La pregunta o concepto específico que se desea buscar en la clase"),
+                    query: z.string().describe("The specific question or concept to search for in the class"),
                 }),
             }
         );
@@ -210,11 +233,11 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
         const getTotalChunksTool = tool(
             async () => {
                 const total = this._vectorStore!.memoryVectors.length;
-                return `El documento actual está dividido en ${total} fragmentos (chunks).`;
+                return `The current document is divided into ${total} chunks.`;
             },
             {
                 name: "get_total_chunks",
-                description: "Devuelve el número total de fragmentos (chunks) en los que se ha dividido la transcripción de la clase actual. Úsala si el usuario pregunta cuántos fragmentos hay o cuál es el tamaño de la base de datos.",
+                description: "Returns the total number of chunks the current class transcript has been divided into. Use it if the user asks how many chunks there are or what the database size is.",
                 schema: z.object({}),
             }
         );
@@ -225,34 +248,34 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
                 
                 
                 if (index < 0 || index >= total) {
-                    return `Error: El índice ${index} está fuera de rango. Por favor, pide un índice entre 0 y ${total - 1}.`;
+                    return `Error: Index ${index} is out of range. Please provide an index between 0 and ${total - 1}.`;
                 }
                         
                 const chunk = this._vectorStore!.memoryVectors[index];
-                return `--- CONTENIDO DEL CHUNK ${index} ---\n${chunk.content}`;
+                return `--- CHUNK ${index} CONTENT ---\n${chunk.content}`;
             },
             {
                 name: "get_chunk_by_index",
-                description: "Devuelve el texto exacto de un fragmento (chunk) específico mediante su índice numérico. Úsala si el usuario pide leer un fragmento en particular.",
+                description: "Returns the exact text of a specific chunk by its numeric index. Use it if the user asks to read a particular chunk.",
                 schema: z.object({
-                    index: z.number().int().describe("El índice numérico del fragmento que se desea recuperar. Debe ser un número entero empezando desde 0."),
+                    index: z.number().int().describe("The numeric index of the chunk to retrieve. Must be an integer starting from 0."),
                 }),
             }
         );
 
 
-        const systemPrompt = `Eres un asistente virtual de la Universidad Politécnica de Valencia (UPV). Tu objetivo principal es ayudar a los alumnos a resolver dudas sobre el video o la clase que están viendo.
+        const systemPrompt = `You are a virtual assistant from the Universidad Politécnica de Valencia (UPV). Your main goal is to help students resolve questions about the video or class they are watching.
         
-        Tienes a tu disposición tres herramientas:
-        - 'search_in_class': Para buscar conceptos, temas o detalles dentro del contenido de la clase.
-        - 'get_total_chunks': Para saber en cuántos fragmentos (chunks) está dividida la transcripción.
-        - 'get_chunk_by_index': Para leer el texto exacto de un fragmento concreto.
+        You have three tools available:
+        - 'search_in_class': To search for concepts, topics or details within the class content.
+        - 'get_total_chunks': To find out how many chunks the transcript is divided into.
+        - 'get_chunk_by_index': To read the exact text of a specific chunk.
         
-        REGLAS ESTRICTAS:
-        1. BÚSQUEDA DE CONTENIDO: Cuando el usuario pregunte sobre cualquier concepto, tema o detalle de la clase, DEBES usar la herramienta 'search_in_class'. 
-        2. CERO ALUCINACIONES: NUNCA inventes información ni respondas basándote en tu conocimiento general si te preguntan sobre el contenido del video. Basa tu respuesta ÚNICAMENTE en la información devuelta por tus herramientas.
-        3. MANEJO DE ERRORES: Si la herramienta de búsqueda devuelve "No se ha encontrado nada", o si un chunk está vacío, dile amablemente al usuario que ese tema no se menciona en el video actual o que el fragmento no contiene información.
-        4. TONO: Responde de manera clara, concisa y en un tono académico y cercano.`;
+        STRICT RULES:
+        1. CONTENT SEARCH: When the user asks about any concept, topic or detail from the class, you MUST use the 'search_in_class' tool. 
+        2. ZERO HALLUCINATIONS: NEVER make up information or answer based on your general knowledge if they ask about the video content. Base your answer ONLY on the information returned by your tools.
+        3. ERROR HANDLING: If the search tool returns nothing, or if a chunk is empty, kindly tell the user that topic is not mentioned in the current video or that the chunk does not contain information.
+        4. TONE: Respond clearly, concisely, and in an academic but approachable tone.`;
         
 
         const settings = this.settings;
