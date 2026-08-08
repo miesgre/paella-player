@@ -11,23 +11,23 @@ export default function ChatWelcome({ onClick = () => {} }: ChatWelcomeProps) {
     return (        
         <div className="welcome">
             <div className="welcome-content">
-                <h1>Welcome to Your AI Assistant! 🚀</h1>
+                <h1>{paellaPlugin.player.translate("Welcome to Your AI Assistant! 🚀")}</h1>
 
                 <div>
-                    <p>You can talk and interact about the content of the video you're watching, ask questions, get explanations, or simply chat about the topic.</p>
+                    <p>{paellaPlugin.player.translate("You can talk and interact about the content of the video you're watching, ask questions, get explanations, or simply chat about the topic.")}</p>
                     
-                    <h2>How it works</h2>
-                    <p>This assistant uses an AI model that analyzes the video transcript to find relevant information. It can only answer questions about the content of the current video.</p>
+                    <h2>{paellaPlugin.player.translate("How it works")}</h2>
+                    <p>{paellaPlugin.player.translate("This assistant uses an AI model that analyzes the video transcript to find relevant information. It can only answer questions about the content of the current video.")}</p>
                     
                     <ul>
-                        <li>✅ Ask questions about concepts mentioned in the class</li>
-                        <li>✅ Get explanations about specific topics</li>
-                        <li>✅ Search for information within the transcript</li>
+                        <li>✅ {paellaPlugin.player.translate("Ask questions about concepts mentioned in the class")}</li>
+                        <li>✅ {paellaPlugin.player.translate("Get explanations about specific topics")}</li>
+                        <li>✅ {paellaPlugin.player.translate("Search for information within the transcript")}</li>
                     </ul>
 
-                    <p className="note">💡 <strong>Note:</strong> The assistant can only answer questions based on the video transcript. It cannot access external information or content from other sources.</p>
+                    <p className="note">💡 <strong>{paellaPlugin.player.translate("Note:")}</strong> {paellaPlugin.player.translate("The assistant can only answer questions based on the video transcript. It cannot access external information or content from other sources.")}</p>
 
-                    <h2>Explore and enjoy the experience!</h2>
+                    <h2>{paellaPlugin.player.translate("Explore and enjoy the experience!")}</h2>
                 </div>
                 
                 

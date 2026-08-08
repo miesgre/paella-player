@@ -28,6 +28,7 @@ type ChatMessage = {
 }
 
 function ReasoningBlock({ segments, processing }: { segments: Segment[]; processing?: boolean }) {
+  const paellaPlugin = usePaellaPlugin<AIAgentChatPlugin>();
   const [open, setOpen] = useState(true);
 
   useEffect(() => {
@@ -39,7 +40,7 @@ function ReasoningBlock({ segments, processing }: { segments: Segment[]; process
   return (
     <details open={open} className="reasoning-block">
       <summary onClick={(e) => { e.preventDefault(); setOpen(!open); }}>
-        {processing ? "Pensando..." : "Razonamiento"}
+        {processing ? paellaPlugin.player.translate("Thinking...") : paellaPlugin.player.translate("Reasoning")}
       </summary>
       {open && (
         <div className="reasoning-body">

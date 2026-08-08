@@ -15,7 +15,7 @@ export const MainAppContent = () => {
         paellaPlugin.showWelcomeMessage = false;
         setShowWelcomeView(false);
         await paellaPlugin.loadVectorStoreAndCreateAgent(async (err, progress, total) => {
-            setErrorLoadingVectorStore(err ? "Error loading vector store" : null);
+            setErrorLoadingVectorStore(err ? paellaPlugin.player.translate("Error loading vector store") : null);
             if (err) {
                 console.error("Error loading vector store:", err);                
             }
