@@ -69,6 +69,17 @@ export function UserSettings({ settings, onClose = () => {} }: UserSettingsProps
                     </>
                 )}
 
+                {modelType === 'webllm' && (
+                    <div className="settings-note">
+                        <p>💡 <strong>Note:</strong> When using WebLLM, the AI model runs locally in your browser using <strong>WebGPU</strong>.</p>
+                        <ul>
+                            <li>✅ Your browser must support <strong>WebGPU</strong>.</li>
+                            <li>✅ You need enough memory to load and run the model.</li>
+                        </ul>
+                        <p>⚠️ Performance depends on your hardware. If you experience issues, try using a different browser or a more powerful device.</p>
+                    </div>
+                )}
+
                 <li>
                     <div className="title">{paellaPlugin.player.translate("Model")}</div>
                     <input type="text" value={modelName} placeholder="gpt-4o"
