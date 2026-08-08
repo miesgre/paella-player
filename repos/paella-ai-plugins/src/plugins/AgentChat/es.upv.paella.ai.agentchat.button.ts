@@ -4,8 +4,8 @@ import {
 } from '@asicupv/paella-core'
 
 
-import defaultOpenChatIcon from '../../icons/bomb.svg?raw';
-import defaultCloseChatIcon from '../../icons/brain-circuit.svg?raw';
+import defaultOpenChatIcon from '../../icons/message-square-more.svg?raw';
+import defaultCloseChatIcon from '../../icons/message-square-off.svg?raw';
 
 import PackagePluginModule from '../PackagePluginModule';
 
