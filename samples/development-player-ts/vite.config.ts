@@ -10,10 +10,10 @@ export default defineConfig({
   },
   server: {
      proxy: {
-      '/api/opencode': {
-        target: 'https://opencode.ai',
+      '/ai-proxy/v1': {
+        target: 'https://opencode.ai/zen/v1',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/opencode/, ''),
+        rewrite: (path) => path.replace(/^\/ai-proxy\/v1/, ''),
         configure: (proxy) => {
         proxy.on('proxyReq', (proxyReq) => {
           proxyReq.removeHeader('Authorization');

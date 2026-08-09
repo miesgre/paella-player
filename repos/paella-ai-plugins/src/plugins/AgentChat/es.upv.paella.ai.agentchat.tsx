@@ -111,7 +111,7 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
         }
 
         const modelType = this.config.settings?.modelType || 'openai';
-        const baseURL = this.config.settings?.baseURL || `${location.origin}/api/opencode/zen/v1`;
+        const baseURL = this.config.settings?.baseURL || `${location.origin}/ai-proxy/v1`;
         const apiKey = this.config.settings?.apiKey || "dummy";
         const modelName = this.config.settings?.modelName || 'big-pickle';
         const contextWindowLength = this.config.settings?.contextWindowLength || 100_000;
