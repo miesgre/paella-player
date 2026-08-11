@@ -6,6 +6,7 @@ import PackagePluginModule from '../PackagePluginModule';
 import type { MemoryVectorStore } from "@langchain/classic/vectorstores/memory";
 import type { ReactAgent } from 'langchain';
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
+import type { InitProgressCallback } from '@mlc-ai/web-llm';
 
 const PaellaPluginContext = createContext<Plugin | null>(null);
 
@@ -202,16 +203,42 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
         }
     }
 
-    async getModel(): Promise<BaseChatModel> {
-        const { ChatOpenAI } = await import("@langchain/openai");
+    async getModel(): Promise<BaseChatModel|null> {
+        console.log("AIAgentChatPlugin.getModel: settings = ", this.settings);
         const settings = this.settings;
-        const model = new ChatOpenAI({
-            apiKey: settings.apiKey,
-            modelName: settings.modelName,
-            configuration: {
-                baseURL: settings.baseURL,
-            },
-        });
+        let model = null;
+
+        if (settings.modelType === "webllm") {
+            const { ChatWebLLM } = await import("@langchain/community/chat_models/webllm");    
+
+            const progressCallback: InitProgressCallback = (progress) => {
+                // Example: {progress: 0.8215229923658885, timeElapsed: 51, text: 'Fetching param cache[68/83]: 1685MB fetched. 82% c…te the cache. Later refreshes will become faster.'}
+                console.log("Progress: ", progress);
+            };
+            model = new ChatWebLLM({
+                model: settings.modelName,
+                // temperature: settings.temperature,
+                // max_tokens: settings.maxTokens,
+                chatOptions: {                    
+                    // temperature: settings.temperature,
+                    // context_window_size: parseInt(settings.contextWindowLength),
+                    // frequency_penalty: settings.frequecyPenalty,                    
+                    // presence_penalty: settings.presencePenalty,
+                },
+            });
+            await model.initialize(progressCallback);            
+        }
+        else if (settings.modelType === "openai") {
+            const { ChatOpenAI } = await import("@langchain/openai");
+        
+            model = new ChatOpenAI({
+                apiKey: settings.apiKey,
+                modelName: settings.modelName,
+                configuration: {
+                    baseURL: settings.baseURL,
+                },
+            });
+        }
         return model;
     }
 
@@ -295,7 +322,7 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
 
         const checkpointer = new MemorySaver();
         const agent = createAgent({
-            model: model,
+            model: model!,
             checkpointer: checkpointer,
             tools: [
                 searchInClassTool,
