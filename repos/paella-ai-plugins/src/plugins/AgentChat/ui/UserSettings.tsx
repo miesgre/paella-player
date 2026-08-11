@@ -3,6 +3,12 @@ import { usePaellaPlugin, type Settings } from "../es.upv.paella.ai.agentchat";
 import type AIAgentChatPlugin from "../es.upv.paella.ai.agentchat";
 import "./UserSettings.css";
 
+const WEBLLM_MODELS = [
+    { id: "Qwen2.5-3B-Instruct-q4f16_1-MLC", name: "Qwen 2.5 3B" },
+    { id: "Phi-3-mini-4k-instruct-q4f16_1-MLC", name: "Phi 3 Mini 4K" },
+    { id: "Llama-3.1-8B-Instruct-q4f32_1-MLC", name: "Llama 3.1 8B" },
+];
+
 interface UserSettingsProps {
     settings: Settings;
     onClose?: () => void;
@@ -16,6 +22,13 @@ export function UserSettings({ settings, onClose = () => {} }: UserSettingsProps
     const [apiKey, setApiKey] = useState(settings.apiKey);
     const [modelName, setModelName] = useState(settings.modelName);
     const [contextWindowLength, setContextWindowLength] = useState(settings.contextWindowLength);
+
+    const handleModelTypeChange = (newType: Settings['modelType']) => {
+        setModelType(newType);
+        if (newType === 'webllm' && !WEBLLM_MODELS.some(m => m.id === modelName)) {
+            setModelName(WEBLLM_MODELS[0].id);
+        }
+    };
 
     const handleSave = () => {
         const newSettings: Settings = {
@@ -48,7 +61,7 @@ export function UserSettings({ settings, onClose = () => {} }: UserSettingsProps
             <ul className="settings-list">
                 <li>
                     <div className="title">{paellaPlugin.player.translate("Model type")}</div>
-                    <select value={modelType} onChange={(e) => setModelType(e.currentTarget.value as Settings['modelType'])}>
+                    <select value={modelType} onChange={(e) => handleModelTypeChange(e.currentTarget.value as Settings['modelType'])}>
                         <option value="openai">OpenAI API</option>
                         <option value="webllm">WebLLM</option>
                     </select>
@@ -82,8 +95,16 @@ export function UserSettings({ settings, onClose = () => {} }: UserSettingsProps
 
                 <li>
                     <div className="title">{paellaPlugin.player.translate("Model")}</div>
-                    <input type="text" value={modelName} placeholder="gpt-4o"
-                        onChange={(e) => setModelName(e.currentTarget.value)} />
+                    {modelType === 'webllm' ? (
+                        <select value={modelName} onChange={(e) => setModelName(e.currentTarget.value)}>
+                            {WEBLLM_MODELS.map(m => (
+                                <option key={m.id} value={m.id}>{m.name}</option>
+                            ))}
+                        </select>
+                    ) : (
+                        <input type="text" value={modelName} placeholder="gpt-4o"
+                            onChange={(e) => setModelName(e.currentTarget.value)} />
+                    )}
                 </li>
 
                 <li>

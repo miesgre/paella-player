@@ -5,6 +5,7 @@ import { MainAppContent } from './ui/MainAppContent';
 import PackagePluginModule from '../PackagePluginModule';
 import type { MemoryVectorStore } from "@langchain/classic/vectorstores/memory";
 import type { ReactAgent } from 'langchain';
+import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
 
 const PaellaPluginContext = createContext<Plugin | null>(null);
 
@@ -201,10 +202,22 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
         }
     }
 
+    async getModel(): Promise<BaseChatModel> {
+        const { ChatOpenAI } = await import("@langchain/openai");
+        const settings = this.settings;
+        const model = new ChatOpenAI({
+            apiKey: settings.apiKey,
+            modelName: settings.modelName,
+            configuration: {
+                baseURL: settings.baseURL,
+            },
+        });
+        return model;
+    }
+
     async createAgent() {
         const { tool } = await import("@langchain/core/tools");
         const { createAgent } = await import("langchain");
-        const { ChatOpenAI } = await import("@langchain/openai");
         const { MemorySaver } = await import("@langchain/langgraph");
         const { z } = await import("zod");
         
@@ -278,14 +291,7 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
         4. TONE: Respond clearly, concisely, and in an academic but approachable tone.`;
         
 
-        const settings = this.settings;
-        const model = new ChatOpenAI({
-            apiKey: settings.apiKey,
-            modelName: settings.modelName,
-            configuration: {
-                baseURL: settings.baseURL,
-            },
-        });
+        const model = await this.getModel();
 
         const checkpointer = new MemorySaver();
         const agent = createAgent({
