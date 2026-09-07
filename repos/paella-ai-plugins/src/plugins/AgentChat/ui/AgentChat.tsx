@@ -1,7 +1,9 @@
 import AIAgentChatPlugin, { usePaellaPlugin } from "../es.upv.paella.ai.agentchat"
+import type { Settings } from "../es.upv.paella.ai.agentchat"
 import { useState, useRef, useEffect } from 'preact/hooks';
 import { marked } from 'marked';
 import { UserSettings } from "./UserSettings";
+import { LoadingPage } from "./LoadingPage";
 import "./AgentChat.css";
 
 marked.setOptions({ gfm: true, breaks: true });
@@ -61,6 +63,11 @@ export const AgentChat = () => {
   const [inputMessage, setInputMessage] = useState<string>("");
   const [processing, setProcessing] = useState<boolean>(false);
   const [showSettings, setShowSettings] = useState<boolean>(false);
+  const [applyingSettings, setApplyingSettings] = useState<boolean>(false);
+  const [loadingPhase, setLoadingPhase] = useState<'model' | 'vectorstore' | null>(null);
+  const [modelProgress, setModelProgress] = useState<number>(0);
+  const [modelText, setModelText] = useState<string>("");
+  const [vectorStoreProgress, setVectorStoreProgress] = useState<number>(0);
 
   const inputRef = useRef<HTMLInputElement | null>(null);
   const listRef = useRef<HTMLUListElement | null>(null);
@@ -193,6 +200,26 @@ export const AgentChat = () => {
     await sendAndProcessMessage(text);
   }
 
+  const handleSaveSettings = async (newSettings: Settings) => {
+    setShowSettings(false);
+    setApplyingSettings(true);
+    try {
+      await paellaPlugin.updateSettings(newSettings, async (phase, progress, total, text) => {
+        setLoadingPhase(phase);
+        if (phase === 'model') {
+          setModelProgress(progress);
+          if (text) setModelText(text);
+        } else {
+          setVectorStoreProgress(progress / total);
+        }
+        await new Promise(resolve => setTimeout(resolve, 0));
+      });
+    } finally {
+      setApplyingSettings(false);
+      setLoadingPhase(null);
+    }
+  };
+
   const handleTimestampClick = (ts: string) => alert(`Timestamp: ${ts}`);
 
   const responseRef = useRef<HTMLDivElement | null>(null);
@@ -211,7 +238,17 @@ export const AgentChat = () => {
   }, [chatMessages]);
 
   if (showSettings) {
-    return <UserSettings settings={paellaPlugin.settings} onClose={() => setShowSettings(false)} />;
+    return <UserSettings settings={paellaPlugin.settings} onClose={() => setShowSettings(false)} onSave={handleSaveSettings} />;
+  }
+
+  if (applyingSettings && loadingPhase) {
+    return <LoadingPage
+      phase={loadingPhase}
+      modelProgress={modelProgress}
+      modelText={modelText}
+      vectorStoreProgress={vectorStoreProgress * 100}
+      error={null}
+    />;
   }
 
   return (

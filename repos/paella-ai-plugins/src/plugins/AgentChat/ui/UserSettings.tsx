@@ -12,9 +12,10 @@ const WEBLLM_MODELS = [
 interface UserSettingsProps {
     settings: Settings;
     onClose?: () => void;
+    onSave?: (newSettings: Settings) => Promise<void>;
 }
 
-export function UserSettings({ settings, onClose = () => {} }: UserSettingsProps) {
+export function UserSettings({ settings, onClose = () => {}, onSave }: UserSettingsProps) {
     const paellaPlugin = usePaellaPlugin<AIAgentChatPlugin>();
 
     const [modelType, setModelType] = useState<Settings['modelType']>(settings.modelType);
@@ -30,7 +31,7 @@ export function UserSettings({ settings, onClose = () => {} }: UserSettingsProps
         }
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         const newSettings: Settings = {
             modelType,
             baseURL,
@@ -38,8 +39,12 @@ export function UserSettings({ settings, onClose = () => {} }: UserSettingsProps
             modelName,
             contextWindowLength,
         };
-        paellaPlugin.updateSettings(newSettings);
-        onClose();
+        if (onSave) {
+            await onSave(newSettings);
+        } else {
+            paellaPlugin.updateSettings(newSettings);
+            onClose();
+        }
     };
 
     return (

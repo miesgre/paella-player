@@ -77,5 +77,7 @@
     "Your browser must support WebGPU.": "Tu navegador debe soportar WebGPU.",
     "You need enough memory to load and run the model.": "Necesitas memoria suficiente para cargar y ejecutar el modelo.",
     "Performance depends on your hardware. If you experience issues, try using a different browser or a more powerful device.": "El rendimiento depende de tu hardware. Si experimentas problemas, intenta usar un navegador diferente o un dispositivo más potente.",
-    "Note:": "Nota:"
+    "Note:": "Nota:",
+    "Loading AI model...": "Cargando modelo de IA...",
+    "Loading vector store...": "Cargando almacén de vectores..."
 }

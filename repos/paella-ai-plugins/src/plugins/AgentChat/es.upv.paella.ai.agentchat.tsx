@@ -7,6 +7,242 @@ import type { MemoryVectorStore } from "@langchain/classic/vectorstores/memory";
 import type { ReactAgent } from 'langchain';
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import type { InitProgressCallback } from '@mlc-ai/web-llm';
+import type { BindToolsInput } from '@langchain/core/language_models/chat_models';
+import type { Runnable } from '@langchain/core/runnables';
+import type { BaseLanguageModelInput } from '@langchain/core/language_models/base';
+import type { AIMessageChunk } from '@langchain/core/messages';
+
+/**
+ * ChatWebLLM wrapper that adds bindTools support.
+ * 
+ * The original ChatWebLLM from @langchain/community extends SimpleChatModel
+ * which doesn't implement bindTools. However, WebLLM's engine supports tools
+ * via the OpenAI-compatible API (engine.chat.completions.create with tools).
+ * 
+ * This wrapper:
+ * 1. Adds bindTools() method to store tools in config
+ * 2. Overrides _streamResponseChunks to pass tools to the engine
+ */
+class ChatWebLLMWithTools {
+    private _inner: any; // ChatWebLLM instance
+    private _boundTools: any[] | undefined;
+    private _boundToolChoice: any | undefined;
+
+    constructor(inner: any) {
+        this._inner = inner;
+    }
+
+    // Proxy all properties to the inner instance
+    get engine() { return this._inner.engine; }
+    get model() { return this._inner.model; }
+    get chatOptions() { return this._inner.chatOptions; }
+    get temperature() { return this._inner.temperature; }
+
+    // Delegate initialize to inner
+    async initialize(progressCallback?: InitProgressCallback) {
+        return this._inner.initialize(progressCallback);
+    }
+
+    // Implement bindTools - stores tools in config for later use
+    bindTools(
+        tools: BindToolsInput[],
+        kwargs?: Record<string, any>
+    ): ChatWebLLMWithTools {
+        const wrapper = new ChatWebLLMWithTools(this._inner);
+        wrapper._boundTools = tools;
+        wrapper._boundToolChoice = kwargs?.tool_choice;
+        return wrapper;
+    }
+
+    // Delegate withConfig
+    withConfig(config: Record<string, any>): ChatWebLLMWithTools {
+        const wrapper = new ChatWebLLMWithTools(this._inner);
+        if (config.tools) wrapper._boundTools = config.tools;
+        if (config.tool_choice) wrapper._boundToolChoice = config.tool_choice;
+        return wrapper;
+    }
+
+    // Required by isBaseChatModel check
+    async invoke(input: any, options?: any): Promise<any> {
+        // Convert input to messages if needed
+        let messages: any[];
+        if (Array.isArray(input)) {
+            messages = input;
+        } else if (input?.toChatMessages) {
+            messages = input.toChatMessages();
+        } else if (typeof input === 'string') {
+            messages = [{ role: 'user', content: input }];
+        } else {
+            messages = [input];
+        }
+
+        const chunks: any[] = [];
+        for await (const chunk of this._streamResponseChunks(messages, options)) {
+            chunks.push(chunk);
+        }
+
+        // Build AIMessage from chunks
+        const textContent = chunks.filter(c => c.type === 'text').map(c => c.text).join('');
+        const toolCallChunks = chunks.filter(c => c.type === 'tool_calls');
+        
+        const { AIMessageChunk } = await import('@langchain/core/messages');
+        
+        return new AIMessageChunk({
+            content: textContent,
+            tool_calls: toolCallChunks.length > 0 ? toolCallChunks[0].tool_calls : undefined,
+        });
+    }
+
+    // Convert LangChain tool format to OpenAI format for WebLLM
+    private _convertTools(tools: any[]): any[] {
+        return tools.map(tool => {
+            // Already in OpenAI format
+            if (tool.type === 'function' && tool.function?.name) {
+                return tool;
+            }
+            // StructuredToolInterface or similar
+            if (tool.name && tool.schema) {
+                return {
+                    type: 'function',
+                    function: {
+                        name: tool.name,
+                        description: tool.description || '',
+                        parameters: tool.schema,
+                    }
+                };
+            }
+            // ToolDefinition format
+            if (tool.function?.name) {
+                return tool;
+            }
+            return tool;
+        });
+    }
+
+    // Override _streamResponseChunks to pass tools to the engine
+    async *_streamResponseChunks(
+        messages: any[],
+        options: any,
+        runManager?: any
+    ): AsyncGenerator<any> {
+        // Convert messages to OpenAI format
+        const messagesInput = messages.map((message: any) => {
+            const langChainType = message._getType();
+            let role: string;
+            if (langChainType === "ai") {
+                role = "assistant";
+            } else if (langChainType === "human") {
+                role = "user";
+            } else if (langChainType === "system") {
+                role = "system";
+            } else if (langChainType === "tool") {
+                role = "tool";
+            } else {
+                role = "user";
+            }
+            return {
+                role,
+                content: typeof message.content === "string" ? message.content : JSON.stringify(message.content),
+                ...(message.tool_call_id ? { tool_call_id: message.tool_call_id } : {}),
+            };
+        });
+
+        // Build request with tools if bound
+        const request: any = {
+            stream: true,
+            messages: messagesInput,
+            stop: options?.stop,
+        };
+
+        if (this._boundTools && this._boundTools.length > 0) {
+            request.tools = this._convertTools(this._boundTools);
+            if (this._boundToolChoice) {
+                request.tool_choice = this._boundToolChoice;
+            }
+        }
+
+        const stream = await this._inner.engine.chat.completions.create(request);
+        
+        let content = "";
+        let toolCalls: any[] = [];
+
+        for await (const chunk of stream) {
+            const delta = chunk.choices[0]?.delta;
+            const text = delta?.content ?? "";
+            
+            if (text) {
+                content += text;
+                // Yield simple text chunks - the agent framework handles message construction
+                yield { text, type: 'text' };
+                await runManager?.handleLLMNewToken(text);
+            }
+
+            // Collect tool calls from chunks
+            if (delta?.tool_calls) {
+                for (const tc of delta.tool_calls) {
+                    const idx = tc.index;
+                    if (!toolCalls[idx]) {
+                        toolCalls[idx] = {
+                            id: tc.id,
+                            name: tc.function?.name || '',
+                            args: '',
+                            type: 'tool_call',
+                        };
+                    }
+                    if (tc.function?.name) toolCalls[idx].name = tc.function.name;
+                    if (tc.function?.arguments) toolCalls[idx].args += tc.function.arguments;
+                }
+            }
+        }
+
+        // If we have tool calls, yield them
+        if (toolCalls.length > 0) {
+            const parsedToolCalls = toolCalls.map(tc => ({
+                ...tc,
+                args: (() => { try { return JSON.parse(tc.args); } catch { return tc.args; } })(),
+            }));
+            yield { text: '', type: 'tool_calls', tool_calls: parsedToolCalls };
+        }
+    }
+
+    // Also override _call for non-streaming
+    async _call(
+        messages: any[],
+        options: any,
+        runManager?: any
+    ): Promise<string> {
+        const chunks: string[] = [];
+        for await (const chunk of this._streamResponseChunks(messages, options, runManager)) {
+            if (chunk.text) chunks.push(chunk.text);
+        }
+        return chunks.join('');
+    }
+}
+
+/**
+ * Factory function to create a ChatWebLLM instance with tools support.
+ */
+export async function createChatWebLLM(
+    modelName: string,
+    progressCallback?: (progress: number, text: string) => Promise<void>
+): Promise<ChatWebLLMWithTools> {
+    const { ChatWebLLM } = await import("@langchain/community/chat_models/webllm");
+    
+    const webllmCallback: InitProgressCallback = async (progress) => {
+        console.log("WebLLM Progress: ", progress);
+        if (progressCallback) {
+            await progressCallback(progress.progress * 100, progress.text);
+        }
+    };
+    
+    const model = new ChatWebLLM({
+        model: modelName,
+        chatOptions: {},
+    });
+    await model.initialize(webllmCallback);
+    
+    return new ChatWebLLMWithTools(model);
+}
 
 const PaellaPluginContext = createContext<Plugin | null>(null);
 
@@ -33,6 +269,13 @@ const PreactContainer = ({paellaPlugin, children}: PreactContainerProps) => {
 
 
 export type LoadVectorStoteProgressCallback = (err: Error | null, progress: number, total: number) => Promise<void>;
+
+export type LoadProgressCallback = (
+    phase: 'model' | 'vectorstore',
+    progress: number,
+    total: number,
+    text?: string
+) => Promise<void>;
 
 
 
@@ -127,12 +370,16 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
         };
     }
 
-    async updateSettings(newSettings: Settings): Promise<void> {
+    async updateSettings(newSettings: Settings, progressCallback?: LoadProgressCallback): Promise<void> {
         this._userSettings = { ...newSettings };
         if (this.allowCustomUserSettings) {
             localStorage.setItem(`${this.name}_settings`, JSON.stringify(newSettings));
         }
-        this.agent = await this.createAgent();
+        if (progressCallback) {
+            await this.loadAll(progressCallback);
+        } else {
+            this.agent = await this.createAgent();
+        }
     }
 
     async isEnabled(): Promise<boolean> {
@@ -203,30 +450,13 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
         }
     }
 
-    async getModel(): Promise<BaseChatModel|null> {
+    async getModel(progressCallback?: (progress: number, text: string) => Promise<void>): Promise<any> {
         console.log("AIAgentChatPlugin.getModel: settings = ", this.settings);
         const settings = this.settings;
         let model = null;
 
         if (settings.modelType === "webllm") {
-            const { ChatWebLLM } = await import("@langchain/community/chat_models/webllm");    
-
-            const progressCallback: InitProgressCallback = (progress) => {
-                // Example: {progress: 0.8215229923658885, timeElapsed: 51, text: 'Fetching param cache[68/83]: 1685MB fetched. 82% c…te the cache. Later refreshes will become faster.'}
-                console.log("Progress: ", progress);
-            };
-            model = new ChatWebLLM({
-                model: settings.modelName,
-                // temperature: settings.temperature,
-                // max_tokens: settings.maxTokens,
-                chatOptions: {                    
-                    // temperature: settings.temperature,
-                    // context_window_size: parseInt(settings.contextWindowLength),
-                    // frequency_penalty: settings.frequecyPenalty,                    
-                    // presence_penalty: settings.presencePenalty,
-                },
-            });
-            await model.initialize(progressCallback);            
+            model = await createChatWebLLM(settings.modelName, progressCallback);
         }
         else if (settings.modelType === "openai") {
             const { ChatOpenAI } = await import("@langchain/openai");
@@ -337,6 +567,23 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
 
     async loadVectorStoreAndCreateAgent(progressCallback: LoadVectorStoteProgressCallback = async () => {}) {
         await this.loadVectorStore(progressCallback);
+        this.agent = await this.createAgent();
+    }
+
+    async loadAll(progressCallback: LoadProgressCallback) {
+        // 1. Load vector store first
+        await this.loadVectorStore(async (err, progress, total) => {
+            await progressCallback('vectorstore', progress, total);
+            await new Promise(resolve => setTimeout(resolve, 0));
+        });
+
+        // 2. Load model
+        await this.getModel(async (progress, text) => {
+            await progressCallback('model', progress, 100, text);
+            await new Promise(resolve => setTimeout(resolve, 0));
+        });
+
+        // 3. Create agent
         this.agent = await this.createAgent();
     }
 }

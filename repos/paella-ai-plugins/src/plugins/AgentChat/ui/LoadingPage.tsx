@@ -1,25 +1,44 @@
 import AIAgentChatPlugin, { usePaellaPlugin } from "../es.upv.paella.ai.agentchat"
 import "./LoadingPage.css";
 
-export const LoadingPage = ({error, loadingProgress}: {error: string | null, loadingProgress: number}) => {  
+interface LoadingPageProps {
+    phase: 'model' | 'vectorstore';
+    modelProgress: number;
+    modelText: string;
+    vectorStoreProgress: number;
+    error: string | null;
+}
+
+export const LoadingPage = ({phase, modelProgress, modelText, vectorStoreProgress, error}: LoadingPageProps) => {  
   const plugin = usePaellaPlugin<AIAgentChatPlugin>();
   const t = plugin?.player.translate || ((msg: string) => msg);
 
-  const progressClamped = Math.min(100, Math.max(0, loadingProgress));
+  const isError = !!error;
+  const isModelPhase = phase === 'model';
+  
+  const progress = isModelPhase ? modelProgress : vectorStoreProgress;
+  const progressClamped = Math.min(100, Math.max(0, progress));
   const progressRounded = Math.round(progressClamped);
 
-  const isError = !!error;
-  const translatedMessage = isError
-    ? (error ? t(error) : t("Error loading vector store"))
-    : t("Loading vector store, please wait...");
+  const title = isError
+    ? t("Error loading vector store")
+    : isModelPhase
+      ? t("Loading AI model...")
+      : t("Loading vector store...");
+
+  const subtitle = isError
+    ? t("Error loading vector store")
+    : isModelPhase
+      ? (modelText || t("Loading AI model..."))
+      : t("Loading vector store, please wait...");
 
   return (
     <section className={`rtc-loading${isError ? " is-error" : ""}`} aria-live="polite">      
 
-      <h1>{isError ? t("Error loading vector store") : t("Loading vector store")}</h1>
+      <h1>{title}</h1>
 
       <p className="rtc-loading-subtitle">
-        {translatedMessage}
+        {subtitle}
       </p>
 
       <div className="rtc-loading-progress-head">
@@ -33,7 +52,7 @@ export const LoadingPage = ({error, loadingProgress}: {error: string | null, loa
 
       <div className="rtc-loading-message-box">
         <span className="rtc-loading-message-dot" aria-hidden="true" />
-        <span>{translatedMessage}</span>
+        <span>{subtitle}</span>
       </div>
     </section>
   );
