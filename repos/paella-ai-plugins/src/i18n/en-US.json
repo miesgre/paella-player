@@ -73,10 +73,6 @@
     "Search for information within the transcript": "Search for information within the transcript",
     "The assistant can only answer questions based on the video transcript. It cannot access external information or content from other sources.": "The assistant can only answer questions based on the video transcript. It cannot access external information or content from other sources.",
     "Explore and enjoy the experience!": "Explore and enjoy the experience!",
-    "When using WebLLM, the AI model runs locally in your browser using WebGPU.": "When using WebLLM, the AI model runs locally in your browser using WebGPU.",
-    "Your browser must support WebGPU.": "Your browser must support WebGPU.",
-    "You need enough memory to load and run the model.": "You need enough memory to load and run the model.",
-    "Performance depends on your hardware. If you experience issues, try using a different browser or a more powerful device.": "Performance depends on your hardware. If you experience issues, try using a different browser or a more powerful device.",
     "Note:": "Note:",
     "Loading AI model...": "Loading AI model...",
     "Loading vector store...": "Loading vector store..."

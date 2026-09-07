@@ -107,31 +107,6 @@
     border-color: var(--highlight-bg-color);
 }
 
-/* ── WebLLM note ── */
-.AIAgentChatPlugin .settings-note {
-    background: var(--main-bg-color);
-    border: 1px solid var(--main-border-color);
-    border-radius: var(--popup-item-border-radius, 8px);
-    padding: 0.8rem 1rem;
-    margin-top: 0.5rem;
-    font-size: clamp(0.75rem, 0.8vw, 0.85rem);
-    line-height: 1.4;
-    grid-column: 1 / -1;
-}
-
-.AIAgentChatPlugin .settings-note p {
-    margin: 0.4rem 0;
-}
-
-.AIAgentChatPlugin .settings-note ul {
-    margin: 0.4rem 0;
-    padding-left: 1.2rem;
-}
-
-.AIAgentChatPlugin .settings-note li {
-    margin: 0.2rem 0;
-}
-
 /* ── Footer ── */
 .AIAgentChatPlugin .settings-footer {
     display: flex;
