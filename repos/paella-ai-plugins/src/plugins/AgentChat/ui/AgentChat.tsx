@@ -94,22 +94,6 @@ export const AgentChat = () => {
   }, [chatMessages]);
 
   const sendAndProcessMessage = async (userQuestion: string) => {
-    const stream = await paellaPlugin.agent?.streamEvents(
-      { messages: [{ role: "user", content: userQuestion }] },
-      {
-        version: "v3",
-        configurable: {
-          thread_id: "memeory_thread_id",
-        },
-      },
-    );
-
-    if (!stream) {
-      console.error("No stream returned from agent");
-      setProcessing(false);
-      return;
-    }
-
     const yieldToRender = () => new Promise<void>(resolve => setTimeout(resolve, 0));
 
     let segments: Segment[] = [];
@@ -131,6 +115,20 @@ export const AgentChat = () => {
     };
 
     try {
+      const stream = await paellaPlugin.agent?.streamEvents(
+        { messages: [{ role: "user", content: userQuestion }] },
+        {
+          version: "v3",
+          configurable: {
+            thread_id: "memeory_thread_id",
+          },
+        },
+      );
+
+      if (!stream) {
+        throw new Error("No stream returned from agent");
+      }
+
       for await (const message of stream.messages) {
         for await (const _delta of message.usage) { /* skip */ }
 
@@ -166,22 +164,15 @@ export const AgentChat = () => {
       }
     } catch (err) {
       console.error("Stream error:", err);
-      currentText += `\n\nError: ${err}`;
-      await flushUpdate();
+      setChatMessages(prev =>
+        prev.map(m => {
+          if (!m.processing) return m;
+          return { ...m, response: `Error: ${err}`, processing: false };
+        })
+      );
+    } finally {
+      setProcessing(false);
     }
-
-    // Flush final
-    await flushUpdate();
-
-    // Mark message as completed
-    setChatMessages(prev =>
-      prev.map(m => {
-        if (!m.processing) return m;
-        const { processing: _, ...done } = m;
-        return done;
-      })
-    );
-    setProcessing(false);
   }
 
   const submitMessage = async (e: Event): Promise<void> => {
