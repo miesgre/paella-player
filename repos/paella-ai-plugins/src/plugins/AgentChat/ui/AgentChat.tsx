@@ -220,10 +220,9 @@ export const AgentChat = () => {
     }
   };
 
-  const responseRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
-    const el = responseRef.current;
-    if (!el) return;
+    const ul = listRef.current;
+    if (!ul) return;
     const handler = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       if (target.classList.contains("timestamp-link")) {
@@ -231,8 +230,8 @@ export const AgentChat = () => {
         handleTimestampClick(target.dataset.ts ?? target.textContent ?? "");
       }
     };
-    el.addEventListener("click", handler);
-    return () => el.removeEventListener("click", handler);
+    ul.addEventListener("click", handler);
+    return () => ul.removeEventListener("click", handler);
   }, [chatMessages]);
 
   if (showSettings) {
@@ -286,7 +285,6 @@ export const AgentChat = () => {
                   <ReasoningBlock segments={msg.segments} processing={msg.processing} />
                   {msg.response &&
                     <div
-                      ref={responseRef}
                       className="chat-response"
                       dangerouslySetInnerHTML={{ __html: formatMarkdown(msg.response) }}
                     />
