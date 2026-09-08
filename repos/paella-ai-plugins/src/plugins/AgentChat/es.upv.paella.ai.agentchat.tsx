@@ -213,7 +213,6 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
     }
 
     async getModel(progressCallback?: (progress: number, text: string) => Promise<void>): Promise<any> {
-        console.log("AIAgentChatPlugin.getModel: settings = ", this.settings);
         const settings = this.settings;
         let model = null;
 
