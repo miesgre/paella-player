@@ -27,7 +27,7 @@ export class AIAgentChatDataTestPlugin extends AIAgentChatDataPlugin<AIAgentChat
     }
 
     get name() {
-        return "es.upv.paella.ai.content.data-test";
+        return "es.upv.paella.ai.agentchat.data";
     }    
 
     async read(_context: string, key: string): Promise<AIAgentChatContentData | null> {
