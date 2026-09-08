@@ -1,3 +1,4 @@
+import { utils } from '@asicupv/paella-core';
 import AIAgentChatPlugin, { usePaellaPlugin } from "../es.upv.paella.ai.agentchat"
 import type { Settings } from "../es.upv.paella.ai.agentchat"
 import { useState, useRef, useEffect } from 'preact/hooks';
@@ -220,7 +221,12 @@ export const AgentChat = () => {
     }
   };
 
-  const handleTimestampClick = (ts: string) => alert(`Timestamp: ${ts}`);
+  const handleTimestampClick = (ts: string) => {
+    const seconds = utils.timeToSeconds(ts);
+    if (seconds !== null) {
+      paellaPlugin.player.setCurrentTime(seconds);
+    }
+  };
 
   const responseRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
