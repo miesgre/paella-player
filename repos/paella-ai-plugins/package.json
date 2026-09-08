@@ -58,6 +58,7 @@
     "@langchain/core": "^1.1.42",
     "@langchain/openai": "^1.4.5",
     "@mlc-ai/web-llm": "^0.2.82",
+    "dompurify": "^3.4.15",
     "langchain": "^1.5.4",
     "marked": "^18.0.7",
     "preact": "^10.29.1",

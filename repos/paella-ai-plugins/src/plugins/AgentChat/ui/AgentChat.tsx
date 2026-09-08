@@ -3,6 +3,7 @@ import AIAgentChatPlugin, { usePaellaPlugin } from "../es.upv.paella.ai.agentcha
 import type { Settings } from "../es.upv.paella.ai.agentchat"
 import { useState, useRef, useEffect } from 'preact/hooks';
 import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 import { UserSettings } from "./UserSettings";
 import { LoadingPage } from "./LoadingPage";
 import "./AgentChat.css";
@@ -12,7 +13,7 @@ marked.setOptions({ gfm: true, breaks: true });
 const TS = /\d{1,2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?/g;
 
 function formatMarkdown(text: string): string {
-  let html = marked.parse(text) as string;
+  let html = DOMPurify.sanitize(marked.parse(text) as string);
   html = html.replace(TS, (m) =>
     `<a class="timestamp-link" href="#" data-ts="${m}">${m}</a>`
   );
