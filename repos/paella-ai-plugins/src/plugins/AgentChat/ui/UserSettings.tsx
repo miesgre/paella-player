@@ -16,7 +16,6 @@ export function UserSettings({ settings, onClose = () => {}, onSave }: UserSetti
     const [baseURL, setBaseURL] = useState(settings.baseURL);
     const [apiKey, setApiKey] = useState(settings.apiKey);
     const [modelName, setModelName] = useState(settings.modelName);
-    const [contextWindowLength, setContextWindowLength] = useState(settings.contextWindowLength);
 
     const handleSave = async () => {
         const newSettings: Settings = {
@@ -24,7 +23,6 @@ export function UserSettings({ settings, onClose = () => {}, onSave }: UserSetti
             baseURL,
             apiKey,
             modelName,
-            contextWindowLength,
         };
         if (onSave) {
             await onSave(newSettings);
@@ -77,15 +75,6 @@ export function UserSettings({ settings, onClose = () => {}, onSave }: UserSetti
                     <div className="title">{paellaPlugin.player.translate("Model")}</div>
                     <input type="text" value={modelName} placeholder="gpt-4o"
                         onChange={(e) => setModelName(e.currentTarget.value)} />
-                </li>
-
-                <li>
-                    <div className="title">
-                        <div>{paellaPlugin.player.translate("Context window")}</div>
-                        <div className="sub-title">{paellaPlugin.player.translate("Maximum number of tokens for the context window")}</div>
-                    </div>
-                    <input type="number" value={contextWindowLength} min={1024} step={1024}
-                        onChange={(e) => setContextWindowLength(parseInt(e.currentTarget.value) || 100000)} />
                 </li>
             </ul>
 

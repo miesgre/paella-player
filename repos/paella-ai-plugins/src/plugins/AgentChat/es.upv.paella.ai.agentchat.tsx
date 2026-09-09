@@ -47,7 +47,6 @@ export interface Settings {
     baseURL: string;
     apiKey: string;
     modelName: string;
-    contextWindowLength: number;
     // temperature?: number;
     // maxTokens?: number;
     // frequecyPenalty?: number;
@@ -121,14 +120,12 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
         const baseURL = this.config.settings?.baseURL || `${location.origin}/ai-proxy/v1`;
         const apiKey = this.config.settings?.apiKey || "dummy";
         const modelName = this.config.settings?.modelName || 'big-pickle';
-        const contextWindowLength = this.config.settings?.contextWindowLength || 100_000;
 
         return {
             modelType,
             baseURL,
             apiKey,
-            modelName,
-            contextWindowLength
+            modelName
         };
     }
 
@@ -238,7 +235,7 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
         
         const searchInClassTool = tool(
             async ({ query }) => {
-                const results = await this._vectorStore!.similaritySearchWithScore(query, 5);                
+                const results = await this._vectorStore!.similaritySearchWithScore(query, this.topK);                
                 const formatted = results.map((res, i) => {
                     const doc = res[0];    // The document (text and metadata)
                     const score = res[1];  // The similarity score
