@@ -45,6 +45,12 @@ export const aiToolsPlugins = [
         config: {
             enabled: true,
             dataContext: "agentchat.captions",
+            settings: {
+                modelType: "openai",
+                baseURL: `${location.origin}/ai-proxy/v1`,
+                apiKey: "dummy",
+                modelName: "big-pickle",
+            }
         }
     },
     {

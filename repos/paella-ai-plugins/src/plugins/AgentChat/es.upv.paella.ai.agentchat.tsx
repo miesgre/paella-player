@@ -56,12 +56,15 @@ export interface Settings {
 }
 
 export interface AIAgentChatPluginconfig extends InteractiveAreaPluginConfig {
-    dataContext?: string; // Optional context for the data source
-    agentName?: string; // Optional name for the agent
-    topK?: number; // Optional number of top results to retrieve from the vector store
-
-    settings?: Partial<Settings>; // Settings for the agent
-    allowCustomUserSettings?: boolean; // Optional flag to allow users to select the model/provider
+    dataContext?: string;
+    agentName?: string;
+    topK?: number;
+    embeddingModel?: string;
+    chunkSize?: number;
+    chunkOverlap?: number;
+    systemPrompt?: string;
+    settings?: Partial<Settings>;
+    allowCustomUserSettings?: boolean;
 }
 
 export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChatPluginconfig> {
@@ -124,9 +127,9 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
         }
 
         const modelType = this.config.settings?.modelType || 'openai';
-        const baseURL = this.config.settings?.baseURL || `${location.origin}/ai-proxy/v1`;
-        const apiKey = this.config.settings?.apiKey || "dummy";
-        const modelName = this.config.settings?.modelName || 'big-pickle';
+        const baseURL = this.config.settings?.baseURL || "";
+        const apiKey = this.config.settings?.apiKey || "";
+        const modelName = this.config.settings?.modelName || "";
 
         return {
             modelType,
@@ -186,7 +189,7 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
 
 
             const embeddings = new HuggingFaceTransformersEmbeddings({
-                model: "Xenova/all-MiniLM-L6-v2"
+                model: this.config.embeddingModel ?? "Xenova/all-MiniLM-L6-v2"
             });
             this._vectorStore = new MemoryVectorStore(embeddings);
 
@@ -200,8 +203,8 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
                 .trim();
             
             const splitter = new RecursiveCharacterTextSplitter({
-                chunkSize: 2000,
-                chunkOverlap: 200,
+                chunkSize: this.config.chunkSize ?? 2000,
+                chunkOverlap: this.config.chunkOverlap ?? 200,
             });
 
             const videoChunks = await splitter.createDocuments([cleanText]);
@@ -220,6 +223,13 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
 
     async getModel(): Promise<ChatOpenAI> {
         const settings = this.settings;
+
+        if (!settings.apiKey || !settings.baseURL || !settings.modelName) {
+            throw new Error(
+                "Missing LLM configuration. Set settings.apiKey, settings.baseURL, " +
+                "and settings.modelName in the plugin config or via the Settings UI."
+            );
+        }
 
         if (settings.modelType === "openai") {
             const { ChatOpenAI } = await import("@langchain/openai");
@@ -297,7 +307,7 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
         );
 
 
-        const systemPrompt = `You are a virtual assistant from the Universidad Politécnica de Valencia (UPV). Your main goal is to help students resolve questions about the video or class they are watching.
+        const systemPrompt = this.config.systemPrompt ?? `You are a virtual assistant from the Universidad Politécnica de Valencia (UPV). Your main goal is to help students resolve questions about the video or class they are watching.
         
         You have three tools available:
         - 'search_in_class': To search for concepts, topics or details within the class content.
