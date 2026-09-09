@@ -45,6 +45,8 @@
     "You": "Tú",
     "Assistant": "Asistente",
     "Send": "Enviar",
+    "Stop": "Detener",
+    "Generation stopped": "Generación detenida",
     "Settings": "Configuración",
     "Close": "Cerrar",
     "Select the AI model and adjust its parameters.": "Selecciona el modelo de IA y ajusta sus parámetros.",

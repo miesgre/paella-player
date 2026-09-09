@@ -45,6 +45,8 @@
     "You": "You",
     "Assistant": "Assistant",
     "Send": "Send",
+    "Stop": "Stop",
+    "Generation stopped": "Generation stopped",
     "Settings": "Settings",
     "Close": "Close",
     "Select the AI model and adjust its parameters.": "Select the AI model and adjust its parameters.",

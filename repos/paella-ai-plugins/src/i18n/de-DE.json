@@ -41,5 +41,7 @@
     "Recording failed": "Audioaufnahme fehlgeschlagen",
     "This transcription instance is already bound to another video element": "Diese Transkriptionsinstanz ist bereits an ein anderes Videoelement gebunden",
     "Start": "Start",
-    "AI Chat bot": "KI-Chatbot"
+    "AI Chat bot": "KI-Chatbot",
+    "Stop": "Stoppen",
+    "Generation stopped": "Generierung gestoppt"
 }

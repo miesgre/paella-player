@@ -74,8 +74,11 @@ export const AgentChat = () => {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const listRef = useRef<HTMLUListElement | null>(null);
   const wasAtBottomRef = useRef(true);
+  const abortRef = useRef<AbortController | null>(null);
+  const stopRequestedRef = useRef(false);
   useEffect(() => {
     inputRef.current?.focus();
+    return () => abortRef.current?.abort();
   }, []);
 
   const checkIfAtBottom = () => {
@@ -96,6 +99,10 @@ export const AgentChat = () => {
 
   const sendAndProcessMessage = async (userQuestion: string) => {
     const yieldToRender = () => new Promise<void>(resolve => setTimeout(resolve, 0));
+
+    stopRequestedRef.current = false;
+    const controller = new AbortController();
+    abortRef.current = controller;
 
     let segments: Segment[] = [];
     let currentReasoning = "";
@@ -123,6 +130,7 @@ export const AgentChat = () => {
           configurable: {
             thread_id: "memeory_thread_id",
           },
+          signal: controller.signal,
         },
       );
 
@@ -164,13 +172,25 @@ export const AgentChat = () => {
         }
       }
     } catch (err) {
-      console.error("Stream error:", err);
-      setChatMessages(prev =>
-        prev.map(m => {
-          if (!m.processing) return m;
-          return { ...m, response: `Error: ${err}`, processing: false };
-        })
-      );
+      if (stopRequestedRef.current) {
+        // User-initiated stop: keep the partially streamed text and mark the
+        // turn as stopped (a neutral state), never as an error.
+        setChatMessages(prev =>
+          prev.map(m => {
+            if (!m.processing) return m;
+            const note = `> ${paellaPlugin.player.translate("Generation stopped")}`;
+            return { ...m, response: m.response ? `${m.response}\n\n${note}` : note, processing: false };
+          })
+        );
+      } else {
+        console.error("Stream error:", err);
+        setChatMessages(prev =>
+          prev.map(m => {
+            if (!m.processing) return m;
+            return { ...m, response: `Error: ${err}`, processing: false };
+          })
+        );
+      }
     } finally {
       setProcessing(false);
     }
@@ -192,6 +212,11 @@ export const AgentChat = () => {
 
     await sendAndProcessMessage(text);
   }
+
+  const stopGeneration = () => {
+    stopRequestedRef.current = true;
+    abortRef.current?.abort();
+  };
 
   const handleSaveSettings = async (newSettings: Settings) => {
     setShowSettings(false);
@@ -297,6 +322,11 @@ export const AgentChat = () => {
       <footer>
         <form onSubmit={submitMessage}>
           <input ref={inputRef} type="text" value={inputMessage} title={paellaPlugin.player.translate("Type your message here")} onChange={(e) => setInputMessage(e.currentTarget.value)} />
+          {processing && (
+            <button type="button" className="stop-button" onClick={stopGeneration} title={paellaPlugin.player.translate("Stop")} aria-label={paellaPlugin.player.translate("Stop")}>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+            </button>
+          )}
           <button type="submit" disabled={processing}>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" width="16" height="16" strokeWidth="2">
               <path d="M15 10l-4 4l6 6l4 -16l-18 7l4 2l2 6l3 -4"></path>
