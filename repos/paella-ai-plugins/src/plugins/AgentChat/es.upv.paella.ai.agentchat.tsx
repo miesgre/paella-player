@@ -112,8 +112,13 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
         if (this.allowCustomUserSettings) {
             const stored = localStorage.getItem(`${this.name}_settings`);
             if (stored) {
-                this._userSettings = JSON.parse(stored) as Settings;
-                return this._userSettings;
+                try {
+                    this._userSettings = JSON.parse(stored) as Settings;
+                    return this._userSettings;
+                }
+                catch {
+                    localStorage.removeItem(`${this.name}_settings`);
+                }
             }
         }
 
