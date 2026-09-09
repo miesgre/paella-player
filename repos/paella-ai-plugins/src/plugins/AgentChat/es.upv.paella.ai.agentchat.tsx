@@ -77,7 +77,7 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
     }
 
     getAriaLabel() {
-        return this.player.translate('AI Agent Chat bot');
+        return this.player.translate('AI Chat bot');
     }
 
     getDescription() {
