@@ -67,6 +67,7 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
     private _appRootElement: HTMLDivElement | null = null;
     private _vectorStore: MemoryVectorStore | null = null;
     private _userSettings: Settings | null = null;
+    private _captions: string | null = null;
     agent: ReactAgent | null = null;
     showWelcomeMessage = true;
 
@@ -142,7 +143,13 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
     }
 
     async isEnabled(): Promise<boolean> {
-        return await super.isEnabled();
+        try {
+            this._captions = await this.player.data?.read(this.dataContext, "captions") ?? null;
+        }
+        catch {
+            this._captions = null;
+        }
+        return (await super.isEnabled()) && this._captions !== null;
     }
 
     async getContent(): Promise<HTMLElement> {
@@ -177,9 +184,10 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
             });
             this._vectorStore = new MemoryVectorStore(embeddings);
 
-
-
-            const rawVttFile = await this.player.data?.read(this.dataContext, "captions");        
+            const rawVttFile = this._captions;
+            if (!rawVttFile) {
+                throw new Error("No captions available for this video");
+            }
             const cleanText = rawVttFile
                 .replace(/WEBVTT\n\n/g, "") // Remove VTT header
                 // .replace(/\d{2}:\d{2}:\d{2}\.\d{3} --> \d{2}:\d{2}:\d{2}\.\d{3}\n/g, "") // Uncomment to strip timestamps
