@@ -81,7 +81,15 @@ enum Events {
 	/** Log message event */
 	LOG = "paella:log",
 	/** Menu item selected event */
-	MENU_ITEM_SELECTED = "paella:menuItemSelected"
+	MENU_ITEM_SELECTED = "paella:menuItemSelected",
+	/** Interactive area panel shown event (no plugin info) */
+	INTERACTIVE_AREA_PANEL_SHOWN = "paella:interactiveAreaPanelShown",
+	/** Interactive area panel hidden event (no plugin info) */
+	INTERACTIVE_AREA_PANEL_HIDDEN = "paella:interactiveAreaPanelHidden",
+	/** Interactive area plugin shown event. Params: { pluginName: string, prevPluginName: string | null } */
+	INTERACTIVE_AREA_PLUGIN_SHOWN = "paella:interactiveAreaPluginShown",
+	/** Interactive area plugin hidden event. Params: { pluginName: string } */
+	INTERACTIVE_AREA_PLUGIN_HIDDEN = "paella:interactiveAreaPluginHidden"
 }
 
 export default Events;
