@@ -1,5 +1,5 @@
 import { Plugin, InteractiveAreaPlugin, type InteractiveAreaPluginConfig } from '@asicupv/paella-core'
-import { createContext, render, type ComponentChildren } from 'preact';
+import { Component, createContext, render, type ComponentChildren } from 'preact';
 import { useContext } from 'preact/hooks';
 import { MainAppContent } from './ui/MainAppContent';
 import PackagePluginModule from '../PackagePluginModule';
@@ -29,6 +29,39 @@ const PreactContainer = ({paellaPlugin, children}: PreactContainerProps) => {
         </PaellaPluginContext.Provider>   
     );
 };
+
+type ErrorBoundaryState = { error: Error | null };
+
+class ErrorBoundary extends Component<{ onRetry?: () => void }, ErrorBoundaryState> {
+    state: ErrorBoundaryState = { error: null };
+
+    static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+        return { error };
+    }
+
+    componentDidCatch(error: Error) {
+        console.error("AgentChat ErrorBoundary caught:", error);
+    }
+
+    render() {
+        if (this.state.error) {
+            return (
+                <div style={{ padding: "1em", color: "#c00" }}>
+                    <p><strong>Something went wrong.</strong></p>
+                    <pre style={{ whiteSpace: "pre-wrap", fontSize: "0.85em" }}>
+                        {this.state.error.message}
+                    </pre>
+                    {this.props.onRetry &&
+                        <button onClick={() => { this.setState({ error: null }); this.props.onRetry?.(); }}>
+                            Retry
+                        </button>
+                    }
+                </div>
+            );
+        }
+        return this.props.children;
+    }
+}
 
 
 export type LoadVectorStoreProgressCallback = (err: Error | null, progress: number, total: number) => Promise<void>;
@@ -192,7 +225,11 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
     }
 
     async getReactNode(): Promise<ComponentChildren> {
-        return (<MainAppContent />);
+        return (
+            <ErrorBoundary>
+                <MainAppContent />
+            </ErrorBoundary>
+        );
     }
 
 
