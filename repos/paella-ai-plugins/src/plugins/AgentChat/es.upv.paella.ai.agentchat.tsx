@@ -4,6 +4,7 @@ import { useContext } from 'preact/hooks';
 import { MainAppContent } from './ui/MainAppContent';
 import PackagePluginModule from '../PackagePluginModule';
 import type { MemoryVectorStore } from "@langchain/classic/vectorstores/memory";
+import type { ChatOpenAI } from "@langchain/openai";
 import type { ReactAgent } from 'langchain';
 
 const PaellaPluginContext = createContext<Plugin | null>(null);
@@ -217,14 +218,12 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
         }
     }
 
-    async getModel(progressCallback?: (progress: number, text: string) => Promise<void>): Promise<any> {
+    async getModel(progressCallback?: (progress: number, text: string) => Promise<void>): Promise<ChatOpenAI> {
         const settings = this.settings;
-        let model = null;
 
         if (settings.modelType === "openai") {
             const { ChatOpenAI } = await import("@langchain/openai");
-        
-            model = new ChatOpenAI({
+            return new ChatOpenAI({
                 apiKey: settings.apiKey,
                 modelName: settings.modelName,
                 configuration: {
@@ -232,7 +231,8 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
                 },
             });
         }
-        return model;
+
+        throw new Error(`Unsupported model type: "${settings.modelType}"`);
     }
 
     async createAgent() {
@@ -315,7 +315,7 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
 
         const checkpointer = new MemorySaver();
         const agent = createAgent({
-            model: model!,
+            model,
             checkpointer: checkpointer,
             tools: [
                 searchInClassTool,
