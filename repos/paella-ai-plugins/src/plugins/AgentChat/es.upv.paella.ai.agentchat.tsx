@@ -208,7 +208,7 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
         }
         catch (error) {            
             this._vectorStore = null;
-            progressCallback(error as Error, 0, 0);
+            throw error;
         }
     }
 
