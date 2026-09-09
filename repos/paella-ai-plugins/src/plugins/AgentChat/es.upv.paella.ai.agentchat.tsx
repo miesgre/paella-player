@@ -142,12 +142,7 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
     }
 
     async isEnabled(): Promise<boolean> {
-        const data = await this.player.data?.read(this.dataContext, "captions");
-        console.log(`AIAgentChatPlugin.isEnabled: data = ${data}`);
-
-        // TODO: check REST endpoint 
-        const enabled = await super.isEnabled();
-        return enabled;
+        return await super.isEnabled();
     }
 
     async getContent(): Promise<HTMLElement> {
