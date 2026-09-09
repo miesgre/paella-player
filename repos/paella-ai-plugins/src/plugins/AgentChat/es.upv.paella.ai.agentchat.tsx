@@ -158,7 +158,22 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
         catch {
             this._captions = null;
         }
-        return (await super.isEnabled()) && this._captions !== null;
+
+        if (!this._captions) {
+            this.player.log.warn(`${this.name}: No captions available. Plugin disabled.`);
+            return false;
+        }
+
+        const settings = this.settings;
+        if (!settings.apiKey || !settings.baseURL || !settings.modelName) {
+            this.player.log.warn(
+                `${this.name}: Missing LLM configuration (apiKey, baseURL, modelName). ` +
+                `Set settings in the plugin config or via the Settings UI.`
+            );
+            return false;
+        }
+
+        return await super.isEnabled();
     }
 
     async getContent(): Promise<HTMLElement> {
@@ -223,13 +238,6 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
 
     async getModel(): Promise<ChatOpenAI> {
         const settings = this.settings;
-
-        if (!settings.apiKey || !settings.baseURL || !settings.modelName) {
-            throw new Error(
-                "Missing LLM configuration. Set settings.apiKey, settings.baseURL, " +
-                "and settings.modelName in the plugin config or via the Settings UI."
-            );
-        }
 
         if (settings.modelType === "openai") {
             const { ChatOpenAI } = await import("@langchain/openai");
