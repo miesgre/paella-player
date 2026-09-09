@@ -31,7 +31,7 @@ const PreactContainer = ({paellaPlugin, children}: PreactContainerProps) => {
 };
 
 
-export type LoadVectorStoteProgressCallback = (err: Error | null, progress: number, total: number) => Promise<void>;
+export type LoadVectorStoreProgressCallback = (err: Error | null, progress: number, total: number) => Promise<void>;
 
 export type LoadProgressCallback = (
     phase: 'model' | 'vectorstore',
@@ -166,7 +166,7 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
             const ReactNode = await this.getReactNode();
             
             render(
-                <PreactContainer paellaPlugin={this} children={ReactNode} />,
+                <PreactContainer paellaPlugin={this}>{ReactNode}</PreactContainer>,
                 this._appRootElement
             );
         }
@@ -178,7 +178,7 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
     }
 
 
-    async loadVectorStore(progressCallback: LoadVectorStoteProgressCallback = async () => {}) {
+    async loadVectorStore(progressCallback: LoadVectorStoreProgressCallback = async () => {}) {
         try {            
             const { RecursiveCharacterTextSplitter } = await import("@langchain/classic/text_splitter");
             const { MemoryVectorStore } = await import("@langchain/classic/vectorstores/memory");
@@ -206,7 +206,7 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
 
             const videoChunks = await splitter.createDocuments([cleanText]);
             
-            progressCallback(null, 0, videoChunks.length);
+            await progressCallback(null, 0, videoChunks.length);
             for (const [index, chunk] of videoChunks.entries()) {                
                 await this._vectorStore.addDocuments([chunk]);
                 await progressCallback(null, index + 1, videoChunks.length);
@@ -218,7 +218,7 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
         }
     }
 
-    async getModel(progressCallback?: (progress: number, text: string) => Promise<void>): Promise<ChatOpenAI> {
+    async getModel(): Promise<ChatOpenAI> {
         const settings = this.settings;
 
         if (settings.modelType === "openai") {
@@ -328,7 +328,7 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
         return agent;
     }
 
-    async loadVectorStoreAndCreateAgent(progressCallback: LoadVectorStoteProgressCallback = async () => {}) {
+    async loadVectorStoreAndCreateAgent(progressCallback: LoadVectorStoreProgressCallback = async () => {}) {
         await this.loadVectorStore(progressCallback);
         this.agent = await this.createAgent();
     }
@@ -341,10 +341,7 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
         });
 
         // 2. Load model
-        await this.getModel(async (progress, text) => {
-            await progressCallback('model', progress, 100, text);
-            await new Promise(resolve => setTimeout(resolve, 0));
-        });
+        await this.getModel();
 
         // 3. Create agent
         this.agent = await this.createAgent();

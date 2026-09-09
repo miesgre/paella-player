@@ -1,5 +1,5 @@
 import {
-    ButtonPlugin, Events, bindEvent,
+    ButtonPlugin,
     type ButtonPluginConfig
 } from '@asicupv/paella-core'
 
