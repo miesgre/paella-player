@@ -363,4 +363,18 @@ window.addEventListener("load", async () => {
         }
     });
 
+    // Debug listeners for interactive area events
+    player.bindEvent(player.Events.INTERACTIVE_AREA_PANEL_SHOWN, (params: any) => {
+        console.log("[InteractiveArea] panel shown", params);
+    });
+    player.bindEvent(player.Events.INTERACTIVE_AREA_PANEL_HIDDEN, (params: any) => {
+        console.log("[InteractiveArea] panel hidden", params);
+    });
+    player.bindEvent(player.Events.INTERACTIVE_AREA_PLUGIN_SHOWN, (params: any) => {
+        console.log("[InteractiveArea] plugin shown", params);
+    });
+    player.bindEvent(player.Events.INTERACTIVE_AREA_PLUGIN_HIDDEN, (params: any) => {
+        console.log("[InteractiveArea] plugin hidden", params);
+    });
+
 });
