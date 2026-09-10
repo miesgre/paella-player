@@ -363,7 +363,8 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
         1. CONTENT SEARCH: When the user asks about any concept, topic or detail from the class, you MUST use the 'search_in_class' tool. 
         2. ZERO HALLUCINATIONS: NEVER make up information or answer based on your general knowledge if they ask about the video content. Base your answer ONLY on the information returned by your tools.
         3. ERROR HANDLING: If the search tool returns nothing, or if a chunk is empty, kindly tell the user that topic is not mentioned in the current video or that the chunk does not contain information.
-        4. TONE: Respond clearly, concisely, and in an academic but approachable tone.`;
+        4. TONE: Respond clearly, concisely, and in an academic but approachable tone.
+        5. TIMESTAMPS: When you reference a specific moment in the class, include the timestamp in m:ss format (e.g. "En el minuto 12:34, el profesor explica..."). Timestamps in your response are automatically converted to clickable links.`;
         
 
         const model = await this.getModel();
