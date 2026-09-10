@@ -109,15 +109,17 @@ export const AgentChat = () => {
     let currentText = "";
 
     const flushUpdate = async () => {
+      // Create a snapshot of segments to ensure Preact detects the change
+      const snapshot = [...segments];
       setChatMessages(prev =>
-        prev.map(m => m.processing ? { ...m, segments, response: currentText } : m)
+        prev.map(m => m.processing ? { ...m, segments: snapshot, response: currentText } : m)
       );
       await yieldToRender();
     };
 
     const flushReasoning = () => {
       if (currentReasoning) {
-        segments.push({ type: "reasoning", text: currentReasoning });
+        segments = [...segments, { type: "reasoning", text: currentReasoning }];
         currentReasoning = "";
       }
     };
@@ -144,7 +146,7 @@ export const AgentChat = () => {
         for await (const delta of message.reasoning) {
           if (currentText) {
             flushReasoning();
-            segments.push({ type: "reasoning", text: currentText });
+            segments = [...segments, { type: "reasoning", text: currentText }];
             currentText = "";
           }
           currentReasoning += delta;
@@ -163,11 +165,11 @@ export const AgentChat = () => {
             .join(", ");
           if (currentText) {
             flushReasoning();
-            segments.push({ type: "reasoning", text: currentText });
+            segments = [...segments, { type: "reasoning", text: currentText }];
             currentText = "";
           }
           flushReasoning();
-          segments.push({ type: "tool", name, args });
+          segments = [...segments, { type: "tool", name, args }];
           await flushUpdate();
         }
       }
