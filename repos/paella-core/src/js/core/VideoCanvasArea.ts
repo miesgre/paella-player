@@ -7,6 +7,7 @@ import {
     loadPluginsOfType,
     unloadPluginsOfType
 } from "./plugin_tools";
+import Events, { triggerEvent } from "./Events";
 import InteractiveAreaPlugin, {
     loadInteractiveAreaPlugins,
     unloadInteractiveAreaPlugins
@@ -28,6 +29,7 @@ export default class VideoCanvasArea extends DomClass {
     protected _buttons: HTMLElement;
     protected _interactiveAreaContainer: DomClass | null = null;
     protected _currentPluginName: string | null = null;
+    protected _visiblePluginName: string | null = null;
 
     [setVideoCanvasAreaVideoContainer](videoContainer: VideoContainer): void {
         this._videoContainer = videoContainer;
@@ -122,24 +124,44 @@ export default class VideoCanvasArea extends DomClass {
         if (!this._interactiveAreaContainer) {
             throw new Error("Unexpected error: the interactive area container is not valid");
         }
+        const prevPluginName = this._visiblePluginName;
         const pluginContent = await (plugin  as InteractiveAreaPlugin).getContent();
 
         this._currentPluginName = pluginName;
         this._interactiveAreaContainer.element.replaceChildren();
         this._interactiveAreaContainer.element.appendChild(pluginContent);
+        this._visiblePluginName = pluginName;
         this.showPanel();
+        if (prevPluginName !== pluginName) {
+            triggerEvent(this.player, Events.INTERACTIVE_AREA_PLUGIN_SHOWN, {
+                pluginName,
+                prevPluginName
+            });
+        }
     }
 
     showPanel() {
+        if (this._visible) {
+            return;
+        }
         this._visible = true;
         this._interactiveAreaContainer?.element.classList.add("visible");
         this.rebuild();
+        triggerEvent(this.player, Events.INTERACTIVE_AREA_PANEL_SHOWN);
     }
 
     hidePanel() {
+        if (!this._visible) {
+            return;
+        }
+        triggerEvent(this.player, Events.INTERACTIVE_AREA_PLUGIN_HIDDEN, {
+            pluginName: this._visiblePluginName as string
+        });
         this._visible = false;
+        this._visiblePluginName = null;
         this._interactiveAreaContainer?.element.classList.remove("visible");
         this.rebuild();
+        triggerEvent(this.player, Events.INTERACTIVE_AREA_PANEL_HIDDEN);
     }
 
     /**

@@ -52,6 +52,8 @@ import {extraPlugins, getCookieConsentFunction}  from '@asicupv/paella-extra-plu
 import '@asicupv/paella-extra-plugins/paella-extra-plugins.css';
 
 import { aiToolsPlugins } from '@asicupv/paella-ai-plugins';
+import { MatomoUserTrackingDataPlugin, UserEventTrackerPlugin } from '@asicupv/paella-user-tracking';
+
 
 import '@asicupv/paella-basic-plugins/paella-basic-plugins.css';
 import '@asicupv/paella-core/paella-core.css';
@@ -329,6 +331,18 @@ window.addEventListener("load", async () => {
                     speedY: 0.4
                 }
             },
+            {
+                plugin: UserEventTrackerPlugin,
+                config: {
+                    enabled: false
+                }
+            },
+            {
+                plugin: MatomoUserTrackingDataPlugin,
+                config: {
+                    enabled: false
+                }
+            },
             ...extraPlugins,
             ...aiToolsPlugins
         ]
@@ -347,6 +361,20 @@ window.addEventListener("load", async () => {
                 console.log(buttonsInGroup.map((p: ButtonPlugin) => p.name));
             }
         }
+    });
+
+    // Debug listeners for interactive area events
+    player.bindEvent(player.Events.INTERACTIVE_AREA_PANEL_SHOWN, (params: any) => {
+        console.log("[InteractiveArea] panel shown", params);
+    });
+    player.bindEvent(player.Events.INTERACTIVE_AREA_PANEL_HIDDEN, (params: any) => {
+        console.log("[InteractiveArea] panel hidden", params);
+    });
+    player.bindEvent(player.Events.INTERACTIVE_AREA_PLUGIN_SHOWN, (params: any) => {
+        console.log("[InteractiveArea] plugin shown", params);
+    });
+    player.bindEvent(player.Events.INTERACTIVE_AREA_PLUGIN_HIDDEN, (params: any) => {
+        console.log("[InteractiveArea] plugin hidden", params);
     });
 
 });

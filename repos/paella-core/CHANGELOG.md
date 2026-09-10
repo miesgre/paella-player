@@ -12,6 +12,24 @@
 
 - paella-core 3 pre release
 
+## 2.12.14
+
+### Patch Changes
+
+- Fix bug in preview image
+
+## 2.12.13
+
+### Patch Changes
+
+- Update the WebVTT parser to use webvtt-parser library
+
+## 2.12.12
+
+### Patch Changes
+
+- Fix bug loading custom styles
+
 ## 2.12.11
 
 ### Patch Changes

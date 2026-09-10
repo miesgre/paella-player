@@ -12,6 +12,7 @@ The Interactive Area is a dynamic panel that shares display space with the video
 - [TranscriptEntry Type](#transcriptentry-type)
 - [TranscriptEntryState Values](#transcriptentrystate-values)
 - [VideoCanvasArea Panel API](#videocanvasarea-panel-api)
+- [Events](#events)
 - [CSS Custom Properties](#css-custom-properties)
 - [Plugin Registration](#plugin-registration)
 
@@ -189,6 +190,72 @@ Refreshes the currently visible panel by calling `getContent()` on the current p
 ### `get currentPluginName(): string \| null`
 
 Returns the name of the currently visible interactive area plugin, or `null` if the panel is hidden.
+
+---
+
+## Events
+
+The interactive area emits events on the player instance through the standard event system. They are available in two levels: **panel events**, which only report the visibility state of the interactive area panel, and **plugin events**, which additionally report which plugin is entering or leaving the panel.
+
+Bind to them with `player.bindEvent(Events.INTERACTIVE_AREA_*, ...)` or by event name string.
+
+### Panel events
+
+Panel events carry **no payload** and are emitted only when the panel's visibility state actually changes (showing an already visible panel or hiding an already hidden panel emits nothing).
+
+#### `paella:interactiveAreaPanelShown` (`Events.INTERACTIVE_AREA_PANEL_SHOWN`)
+
+Emitted when the interactive area panel becomes visible.
+
+#### `paella:interactiveAreaPanelHidden` (`Events.INTERACTIVE_AREA_PANEL_HIDDEN`)
+
+Emitted when the interactive area panel becomes hidden.
+
+### Plugin events
+
+#### `paella:interactiveAreaPluginShown` (`Events.INTERACTIVE_AREA_PLUGIN_SHOWN`)
+
+Emitted when a plugin's content is shown in the interactive area. Not emitted when the named plugin is not found, or when the same plugin that is already visible is shown again (only the panel content is refreshed).
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `pluginName` | `string` | The plugin that is now shown |
+| `prevPluginName` | `string \| null` | The plugin that was visible before, or `null` if the panel was hidden or no plugin had been shown yet |
+
+#### `paella:interactiveAreaPluginHidden` (`Events.INTERACTIVE_AREA_PLUGIN_HIDDEN`)
+
+Emitted when the panel is hidden and a plugin was visible. Not emitted when hiding an already hidden panel.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `pluginName` | `string` | The plugin that was being shown |
+
+### Event emission order
+
+- **Showing a plugin**: `INTERACTIVE_AREA_PANEL_SHOWN` first (only if the panel was hidden), then `INTERACTIVE_AREA_PLUGIN_SHOWN` (only if the plugin changed).
+- **Hiding the panel**: `INTERACTIVE_AREA_PLUGIN_HIDDEN` first, then `INTERACTIVE_AREA_PANEL_HIDDEN` (only if the panel was visible).
+
+### Example
+
+```typescript
+import { Events } from "@asicupv/paella-core";
+
+player.bindEvent(Events.INTERACTIVE_AREA_PLUGIN_SHOWN, ({ pluginName, prevPluginName }: any) => {
+    console.log(`${prevPluginName ?? "(none)"} -> ${pluginName}`);
+});
+
+player.bindEvent(Events.INTERACTIVE_AREA_PLUGIN_HIDDEN, ({ pluginName }: any) => {
+    console.log(`Hidden: ${pluginName}`);
+});
+
+player.bindEvent(Events.INTERACTIVE_AREA_PANEL_SHOWN, () => {
+    console.log("Panel visible");
+});
+
+player.bindEvent(Events.INTERACTIVE_AREA_PANEL_HIDDEN, () => {
+    console.log("Panel hidden");
+});
+```
 
 ---
 
