@@ -192,6 +192,14 @@ export const AgentChat = () => {
         );
       }
     } finally {
+      // Mark message as completed (remove processing flag)
+      setChatMessages(prev =>
+        prev.map(m => {
+          if (!m.processing) return m;
+          const { processing: _, ...done } = m;
+          return done;
+        })
+      );
       setProcessing(false);
     }
   }
