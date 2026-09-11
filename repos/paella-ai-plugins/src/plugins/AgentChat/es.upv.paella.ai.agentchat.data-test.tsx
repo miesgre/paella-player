@@ -5,19 +5,19 @@ import PackagePluginModule from '../PackagePluginModule';
 
 export type AIAgentChatContentData = string | null;
 
+export interface AIAgentChatDataTestPluginConfig extends DataPluginConfig {    
+};
 
-export class AIAgentChatDataPlugin<C extends DataPluginConfig> extends DataPlugin<C, AIAgentChatContentData> {
+
+export class AIAgentChatDataBasePlugin<C extends DataPluginConfig> extends DataPlugin<C, AIAgentChatContentData> {
     async read(_context: string, key: string): Promise<AIAgentChatContentData> {     
         return null;
     }
 }
 
 
-export interface AIAgentChatDataTestPluginConfig extends DataPluginConfig {    
-};
 
-
-export class AIAgentChatDataTestPlugin extends AIAgentChatDataPlugin<AIAgentChatDataTestPluginConfig> {
+export class AIAgentChatDataPlugin extends AIAgentChatDataBasePlugin<AIAgentChatDataTestPluginConfig> {
     getPluginModuleInstance() {
         return PackagePluginModule.Get();
     }
@@ -86,11 +86,13 @@ export class AIAgentChatDataTestPlugin extends AIAgentChatDataPlugin<AIAgentChat
     }
 
     async read(_context: string, key: string): Promise<AIAgentChatContentData> {
+        console.log("Read")
         const selected = this.selectCaptionsLanguage();
+        console.log (`Read lang: ${selected}`)
         if (!selected) {
             return null;
         }
-
+        console.log("jaja");
         return this.captionsToVTT(selected);
     }
 }

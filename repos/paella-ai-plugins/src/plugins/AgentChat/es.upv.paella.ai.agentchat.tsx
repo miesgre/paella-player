@@ -104,7 +104,6 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
     private _appRootElement: HTMLDivElement | null = null;
     private _vectorStore: MemoryVectorStore | null = null;
     private _userSettings: Settings | null = null;
-    private _captions: string | null = null;
     agent: ReactAgent | null = null;
     showWelcomeMessage = true;
 
@@ -184,26 +183,14 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
         }
     }
 
-    async isEnabled(): Promise<boolean> {
-        try {
-            this._captions = await this.player.data?.read(this.dataContext, "captions") ?? null;
-        }
-        catch {
-            this._captions = null;
-        }
-
-        if (!this._captions) {
-            this.player.log.warn(`${this.name}: No captions available. Plugin disabled.`);
-            return false;
-        }
-
+    async isEnabled(): Promise<boolean> {        
         const settings = this.settings;
         if (!settings.apiKey || !settings.baseURL || !settings.modelName) {
             this.player.log.warn(
                 `${this.name}: Missing LLM configuration (apiKey, baseURL, modelName). ` +
                 `Set settings in the plugin config or via the Settings UI.`
             );
-            return false;
+            // return false;
         }
 
         return await super.isEnabled();
@@ -245,7 +232,7 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
             });
             this._vectorStore = new MemoryVectorStore(embeddings);
 
-            const rawVttFile = this._captions;
+            const rawVttFile = await this.player.data?.read(this.dataContext, "captions") ?? null;
             if (!rawVttFile) {
                 throw new Error("No captions available for this video");
             }

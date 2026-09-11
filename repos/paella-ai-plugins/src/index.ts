@@ -4,7 +4,7 @@ import AIChatPlugin from './plugins/es.upv.paella.ai.chat';
 import RealTimeCaptionsPlugin from './plugins/RealTimeCaptions/es.upv.paella.ai.realTimeCaptions';
 import AIAgentChatButtonPlugin from './plugins/AgentChat/es.upv.paella.ai.agentchat.button';
 import AIAgentChatPlugin from './plugins/AgentChat/es.upv.paella.ai.agentchat';
-import {AIAgentChatDataTestPlugin} from './plugins/AgentChat/es.upv.paella.ai.agentchat.data-test';
+import {AIAgentChatDataPlugin} from './plugins/AgentChat/es.upv.paella.ai.agentchat.data-test';
 
 export const aiToolsPlugins = [
     {
@@ -54,7 +54,7 @@ export const aiToolsPlugins = [
         }
     },
     {
-        plugin: AIAgentChatDataTestPlugin,
+        plugin: AIAgentChatDataPlugin,
         config: {
             enabled: true,
             context: ["agentchat.captions"],
