@@ -1,5 +1,4 @@
 import PluginModule from "../core/PluginModule";
-import packageData from "../../../package.json";
 import type { Dictionaries } from "../core/Localization";
 
 let g_pluginModule: PaellaCorePlugins | null = null;
@@ -17,7 +16,7 @@ export default class PaellaCorePlugins extends PluginModule {
     }
 
     get moduleVersion() {
-        return (packageData as any).version;
+        return __PAELLA_VERSION__;
     }
 
     async getDictionaries(): Promise<Dictionaries | null> {

@@ -84,7 +84,6 @@ function buildPreview(this: Paella): void {
     this._previewContainer = new PreviewContainer(this, this._containerElement, preview, previewPortrait);
 }
 
-import packageData from "../../package.json";
 import ManifestParser from "./core/ManifestParser";
 import { DomClass } from './core/dom';
 
@@ -235,7 +234,6 @@ async function postLoadPlayer(this: Paella): Promise<void> {
  */
 export default class Paella {
     _log: Log;
-    _packageData: any;
     _skin: Skin;
     _containerElement: HTMLElement;
     _initParams: InitParams;
@@ -288,8 +286,6 @@ export default class Paella {
      */
     constructor(containerElement: string | HTMLElement, initParams: InitParams = {}) {
         this._log = new Log(this);
-
-        this._packageData = packageData;
 
         // The default log level before loading the configuration is
         // VERBOSE, to ensure that all previous messages are displayed
@@ -392,7 +388,7 @@ export default class Paella {
      * @type {string}
      */
     get version(): string {
-        return this._packageData.version;
+        return __PAELLA_VERSION__;
     }
 
     /**
