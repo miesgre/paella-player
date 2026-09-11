@@ -130,7 +130,7 @@ export const AgentChat = () => {
         {
           version: "v3",
           configurable: {
-            thread_id: "memeory_thread_id",
+            thread_id: paellaPlugin.currentThreadId,
           },
           signal: controller.signal,
         },
@@ -226,6 +226,11 @@ export const AgentChat = () => {
   const stopGeneration = () => {
     stopRequestedRef.current = true;
     abortRef.current?.abort();
+  };
+
+  const handleClearChat = async () => {
+    await paellaPlugin.clearChat();
+    setChatMessages([]);
   };
 
   const handleSaveSettings = async (newSettings: Settings) => {
@@ -343,6 +348,16 @@ export const AgentChat = () => {
             </svg>
             {paellaPlugin.player.translate("Send")}
           </button>
+          {chatMessages.length > 0 && (
+            <button type="button" disabled={processing} onClick={handleClearChat} title={paellaPlugin.player.translate("Clear chat")} aria-label={paellaPlugin.player.translate("Clear chat")}>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" width="16" height="16" strokeWidth="2">
+                <path d="M3 6h18"></path>
+                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+              </svg>
+              {paellaPlugin.player.translate("Clear")}
+            </button>
+          )}
           {paellaPlugin.allowCustomUserSettings && (
             <button type="button" disabled={processing} onClick={() => setShowSettings(true)}>
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" class="lucide lucide-settings2-icon lucide-settings-2"><path d="M14 17H5"/><path d="M19 7h-9"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></svg>

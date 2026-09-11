@@ -6,6 +6,7 @@ import PackagePluginModule from '../PackagePluginModule';
 import type { MemoryVectorStore } from "@langchain/classic/vectorstores/memory";
 import type { ChatOpenAI } from "@langchain/openai";
 import type { ReactAgent } from 'langchain';
+import type { MemorySaver } from '@langchain/langgraph';
 
 const PaellaPluginContext = createContext<Plugin | null>(null);
 
@@ -104,8 +105,24 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
     private _appRootElement: HTMLDivElement | null = null;
     private _vectorStore: MemoryVectorStore | null = null;
     private _userSettings: Settings | null = null;
+    private _checkpointer: MemorySaver | null = null;
+    private _currentThreadId: string = "";
     agent: ReactAgent | null = null;
     showWelcomeMessage = true;
+
+    get currentThreadId(): string {
+        if (!this._currentThreadId) {
+            this._currentThreadId = `${this.player.videoId}_${Date.now()}`;
+        }
+        return this._currentThreadId;
+    }
+
+    async clearChat(): Promise<void> {
+        if (this._checkpointer && this._currentThreadId) {
+            await this._checkpointer.deleteThread(this._currentThreadId);
+        }
+        this._currentThreadId = `${this.player.videoId}_${Date.now()}`;
+    }
 
     getPluginModuleInstance() {
         return PackagePluginModule.Get();
@@ -442,10 +459,10 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
 
         const model = await this.getModel();
 
-        const checkpointer = new MemorySaver();
+        this._checkpointer = new MemorySaver();
         const agent = createAgent({
             model,
-            checkpointer: checkpointer,
+            checkpointer: this._checkpointer,
             tools: [
                 searchInClassTool,
                 getTotalChunksTool,
