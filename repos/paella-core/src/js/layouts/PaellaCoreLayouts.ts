@@ -1,5 +1,4 @@
 import PluginModule from "../core/PluginModule";
-import packageData from "../../../package.json";
 
 let g_pluginModule: PaellaCoreLayouts | null = null;
 
@@ -15,7 +14,7 @@ export default class PaellaCoreLayouts extends PluginModule {
         return "paella-core default video layouts";
     }
 
-    get moduleVersion() {
-        return packageData.version;
+    get moduleVersion(): string {
+        return __PAELLA_VERSION__;
     }
 }

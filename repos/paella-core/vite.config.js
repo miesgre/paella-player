@@ -1,8 +1,16 @@
 import { defineConfig } from 'vite';
 import dts from 'vite-plugin-dts';
+import { readFileSync } from 'node:fs';
+
+const pkgVersion = JSON.parse(
+    readFileSync(new URL('./package.json', import.meta.url), 'utf8')
+).version;
 
 export default defineConfig({
     root: './src',
+    define: {
+        __PAELLA_VERSION__: JSON.stringify(pkgVersion)
+    },
     build: {
         outDir: '../dist',
         lib: {

@@ -1,5 +1,4 @@
 import PluginModule from "../core/PluginModule";
-import packageData from "../../../package.json";
 
 let g_pluginModule: PaellaCoreDataPlugins | null = null;
 
@@ -15,7 +14,7 @@ export default class PaellaCoreDataPlugins extends PluginModule {
         return "paella-core default data plugins";
     }
 
-    get moduleVersion() {
-        return packageData.version;
+    get moduleVersion(): string {
+        return __PAELLA_VERSION__;
     }
 }
