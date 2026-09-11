@@ -21,16 +21,16 @@ export const LoadingPage = ({phase, modelProgress, modelText, vectorStoreProgres
   const progressRounded = Math.round(progressClamped);
 
   const title = isError
-    ? t("Error loading vector store")
+    ? t("Error loading transcript")
     : isModelPhase
-      ? t("Loading AI model...")
-      : t("Loading vector store...");
+      ? t("Preparing AI assistant...")
+      : t("Loading video transcript...");
 
   const subtitle = isError
-    ? t("Error loading vector store")
+    ? t("Error loading transcript")
     : isModelPhase
-      ? (modelText || t("Loading AI model..."))
-      : t("Loading vector store, please wait...");
+      ? (modelText || t("Preparing AI assistant..."))
+      : t("Analyzing transcript...");
 
   return (
     <section className={`rtc-loading${isError ? " is-error" : ""}`} aria-live="polite">      

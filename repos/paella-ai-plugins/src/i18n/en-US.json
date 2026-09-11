@@ -61,9 +61,9 @@
     "Close Chat": "Close Chat",
     "Open/Close Chat": "Open/Close Chat",
     "Opens or closes the AI Agent Chat window.": "Opens or closes the AI Agent Chat window.",
-    "Error loading vector store": "Error loading vector store",
-    "Loading vector store, please wait...": "Loading vector store, please wait...",
-    "Loading vector store": "Loading vector store",
+    "Error loading transcript": "Error loading transcript",
+    "Analyzing transcript...": "Analyzing transcript...",
+    "Loading video transcript...": "Loading video transcript...",
     "Thinking...": "Thinking...",
     "Reasoning": "Reasoning",
     "Welcome to Your AI Assistant! 🚀": "Welcome to Your AI Assistant! 🚀",
@@ -76,6 +76,6 @@
     "The assistant can only answer questions based on the video transcript. It cannot access external information or content from other sources.": "The assistant can only answer questions based on the video transcript. It cannot access external information or content from other sources.",
     "Explore and enjoy the experience!": "Explore and enjoy the experience!",
     "Note:": "Note:",
-    "Loading AI model...": "Loading AI model...",
+    "Preparing AI assistant...": "Preparing AI assistant...",
     "Loading vector store...": "Loading vector store..."
 }

@@ -43,5 +43,9 @@
     "Start": "Start",
     "AI Chat bot": "KI-Chatbot",
     "Stop": "Stoppen",
-    "Generation stopped": "Generierung gestoppt"
+    "Generation stopped": "Generierung gestoppt",
+    "Preparing AI assistant...": "KI-Assistent wird vorbereitet...",
+    "Loading video transcript...": "Video-Transkript wird geladen...",
+    "Analyzing transcript...": "Transkript wird analysiert...",
+    "Error loading transcript": "Fehler beim Laden des Transkripts"
 }

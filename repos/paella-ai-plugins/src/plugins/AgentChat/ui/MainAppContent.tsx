@@ -26,7 +26,7 @@ export const MainAppContent = () => {
                 setVectorStoreProgress(progress / total);
             }
             if (phase === 'vectorstore' && progress === 0 && total === 0) {
-                setErrorLoading(paellaPlugin.player.translate("Error loading vector store"));
+                setErrorLoading(paellaPlugin.player.translate("Error loading transcript"));
             }
             await new Promise(resolve => setTimeout(resolve, 0));
         });

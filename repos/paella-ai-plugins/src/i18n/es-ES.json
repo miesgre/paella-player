@@ -61,9 +61,9 @@
     "Close Chat": "Cerrar chat",
     "Open/Close Chat": "Abrir/Cerrar chat",
     "Opens or closes the AI Agent Chat window.": "Abre o cierra la ventana del chat del agente de IA.",
-    "Error loading vector store": "Error al cargar el almacén de vectores",
-    "Loading vector store, please wait...": "Cargando almacén de vectores, por favor espera...",
-    "Loading vector store": "Cargando almacén de vectores",
+    "Error loading transcript": "Error al cargar la transcripción",
+    "Analyzing transcript...": "Analizando transcripción, esto puede tardar un momento...",
+    "Loading video transcript...": "Cargando transcripción del video...",
     "Thinking...": "Pensando...",
     "Reasoning": "Razonamiento",
     "Welcome to Your AI Assistant! 🚀": "¡Bienvenido a tu Asistente de IA! 🚀",
@@ -76,6 +76,6 @@
     "The assistant can only answer questions based on the video transcript. It cannot access external information or content from other sources.": "El asistente solo puede responder preguntas basadas en la transcripción del video. No puede acceder a información externa ni a contenido de otras fuentes.",
     "Explore and enjoy the experience!": "¡Explora y disfruta de la experiencia!",
     "Note:": "Nota:",
-    "Loading AI model...": "Cargando modelo de IA...",
+    "Preparing AI assistant...": "Preparando el asistente de IA...",
     "Loading vector store...": "Cargando almacén de vectores..."
 }

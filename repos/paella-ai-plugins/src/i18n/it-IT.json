@@ -43,5 +43,9 @@
     "Start": "Start",
     "AI Chat bot": "Bot di chat IA",
     "Stop": "Ferma",
-    "Generation stopped": "Generazione interrotta"
+    "Generation stopped": "Generazione interrotta",
+    "Preparing AI assistant...": "Preparazione dell'assistente IA...",
+    "Loading video transcript...": "Caricamento della trascrizione del video...",
+    "Analyzing transcript...": "Analisi della trascrizione in corso...",
+    "Error loading transcript": "Errore nel caricamento della trascrizione"
 }
