@@ -36,6 +36,7 @@ import { createProgressIndicator } from "./core/progress-indicator.js";
 import {
     defaultTranslateFunction,
     defaultSetLanguageFunction,
+    defaultGetLanguageFunction,
     defaultAddDictionaryFunction,
     setTranslateFunction,
     setGetLanguageFunction,
@@ -53,8 +54,6 @@ import {
     defaultGetDefaultLanguageFunction,
     setupDefaultLanguage
 } from "./core/Localization";
-
-import { defaultGetLanguageFunction } from "./core/Localization";
 
 import Log, { LOG_LEVEL } from "./core/Log";
 
@@ -80,9 +79,9 @@ export const PlayerStateNames = Object.freeze([
 ]);
 
 function buildPreview(this: Paella): void {
-    const preview = (this.videoManifest?.metadata?.preview && resolveResourcePath(this as any, this.videoManifest?.metadata?.preview)) || this.defaultVideoPreview;
-    const previewPortrait = (this.videoManifest?.metadata?.previewPortrait && resolveResourcePath(this as any, this.videoManifest?.metadata?.previewPortrait)) || this.defaultVideoPreviewPortrait;
-    this._previewContainer = new PreviewContainer(this as any, this._containerElement, preview, previewPortrait);
+    const preview = (this.videoManifest?.metadata?.preview && resolveResourcePath(this, this.videoManifest?.metadata?.preview)) || this.defaultVideoPreview;
+    const previewPortrait = (this.videoManifest?.metadata?.previewPortrait && resolveResourcePath(this, this.videoManifest?.metadata?.previewPortrait)) || this.defaultVideoPreviewPortrait;
+    this._previewContainer = new PreviewContainer(this, this._containerElement, preview, previewPortrait);
 }
 
 import packageData from "../../package.json";
@@ -145,17 +144,17 @@ async function preLoadPlayer(this: Paella): Promise<void> {
     // Override config.json options from skin
     overrideSkinConfig.apply(this.skin, [this._config]);
 
-    setupDefaultLanguage(this as any);
+    setupDefaultLanguage(this);
 
     this._defaultVideoPreview = this._config.defaultVideoPreview || this._initParams.defaultVideoPreview || "";
     this._defaultVideoPreviewPortrait = this._config.defaultVideoPreviewPortrait || this._initParams.defaultVideoPreviewPortrait || "";
 
-    this._cookieConsent = new CookieConsent(this as any, {
+    this._cookieConsent = new CookieConsent(this, {
         getConsent: this._initParams.getCookieConsentFunction, 
         getDescription: this._initParams.getCookieDescriptionFunction as any
     });
 
-    this._preferences = new Preferences(this as any);
+    this._preferences = new Preferences(this);
 
     const urlSearch = new URLSearchParams(window.location.search);
     const caseInsensitiveParams = new URLSearchParams();
@@ -171,10 +170,10 @@ async function preLoadPlayer(this: Paella): Promise<void> {
     // Load localization dictionaries
     await this._initParams.loadDictionaries!(this);
 
-    registerPlugins(this as any);
+    registerPlugins(this);
 
     // EventLogPlugin plugins are loaded first, so that all lifecycle events can be captured.
-    await loadLogEventPlugins(this as any);
+    await loadLogEventPlugins(this);
 
     // Create video container.
     this._videoCanvasArea = new VideoCanvasArea(this, this._containerElement);
@@ -201,7 +200,7 @@ async function postLoadPlayer(this: Paella): Promise<void> {
     this.log.debug(this.videoManifest);
 
     // Load data plugins
-    this._data = new Data(this as any);
+    this._data = new Data(this);
 
     // Load default dictionaries
     for (const lang in defaultDictionaries) {
@@ -210,7 +209,7 @@ async function postLoadPlayer(this: Paella): Promise<void> {
     }
 
     this._playerState = PlayerState.MANIFEST;
-    triggerEvent(this as any, Events.MANIFEST_LOADED);
+    triggerEvent(this, Events.MANIFEST_LOADED);
 
     // The video preview is required
     if (!this.videoManifest?.metadata?.preview) {
@@ -288,7 +287,7 @@ export default class Paella {
      * @param {Array<PluginRef|Plugin>} [initParams.plugins] - Array of plugin references or instances
      */
     constructor(containerElement: string | HTMLElement, initParams: InitParams = {}) {
-        this._log = new Log(this as any);
+        this._log = new Log(this);
 
         this._packageData = packageData;
 
@@ -310,7 +309,7 @@ export default class Paella {
         containerElement.classList.add("player-container");
 
         this.log.debug("Loading skin manager");
-        this._skin = new Skin(this as any);
+        this._skin = new Skin(this);
         
         this._containerElement = containerElement;
         this._initParams = initParams;
@@ -379,8 +378,8 @@ export default class Paella {
         this._resizeEventListener = window.addEventListener("resize", resize);
         
         this.containerElement.addEventListener("fullscreenchange", () => {
-            triggerEvent(this as any, Events.FULLSCREEN_CHANGED, { status: this.isFullscreen });
-            this.isFullscreen ? triggerEvent(this as any, Events.ENTER_FULLSCREEN) : triggerEvent(this as any, Events.EXIT_FULLSCREEN);
+            triggerEvent(this, Events.FULLSCREEN_CHANGED, { status: this.isFullscreen });
+            this.isFullscreen ? triggerEvent(this, Events.ENTER_FULLSCREEN) : triggerEvent(this, Events.EXIT_FULLSCREEN);
         });
 
         this._playerState = PlayerState.UNLOADED;
@@ -783,7 +782,7 @@ export default class Paella {
      * @returns {string} - The translated word.
      */
     translate(word: string | undefined | null, keys: any = null): string {
-        return translate(word as any, keys) as any;
+        return translate(word, keys) as any;
     }
 
     /**
@@ -824,7 +823,7 @@ export default class Paella {
      * @returns {string} - The default language code.
      */
     getDefaultLanguage(): string {
-        return getDefaultLanguage(this as any);
+        return getDefaultLanguage(this);
     }
 
     /**
@@ -834,7 +833,7 @@ export default class Paella {
      * @param {boolean} [unregisterOnUnload=true] - Whether to unregister the event on unload.
      */
     bindEvent(eventName: string | string[], fn: (data: any) => void, unregisterOnUnload: boolean = true): void {
-        bindEvent(this as any, eventName, (data: any) => fn(data), unregisterOnUnload);
+        bindEvent(this, eventName, (data: any) => fn(data), unregisterOnUnload);
     }
 
     /**
@@ -843,7 +842,7 @@ export default class Paella {
      * @param {Object} [data] - Optional data to pass with the event.
      */
     triggerEvent(eventName: string, data: any = {}): void {
-        triggerEvent(this as any, eventName, data);
+        triggerEvent(this, eventName, data);
     }
 
     /**
@@ -957,7 +956,7 @@ export default class Paella {
 
             this.log.debug(`Loading video with identifier '${this.videoId}' from URL '${this.manifestFileUrl}'`);
 
-            const validContents = getAvailableContentIds(this as any, url.length)[0];
+            const validContents = getAvailableContentIds(this, url.length)[0];
             this._videoManifest = {
                 metadata: {
                     duration,
@@ -967,7 +966,7 @@ export default class Paella {
                 },
 
                 streams: url.map((u, i) => {
-                    const sources = getSourceWithUrl(this as any, u);
+                    const sources = getSourceWithUrl(this, u);
                     return {
                         sources,
                         content: validContents[i],
@@ -981,7 +980,7 @@ export default class Paella {
         catch (err: any) {
             this._playerState = PlayerState.ERROR;
             this.log.error(err);
-            this._errorContainer = new ErrorContainer(this as any, this.translate(err.message));
+            this._errorContainer = new ErrorContainer(this, this.translate(err.message));
             throw err;
         }
     }
@@ -1009,7 +1008,7 @@ export default class Paella {
     
             this.log.debug(`Loading video with identifier '${this.videoId}' from URL '${this.manifestFileUrl}'`);
     
-            this._videoManifest = await this.initParams.loadVideoManifest!(this.manifestFileUrl!, this._config, this as any);
+            this._videoManifest = await this.initParams.loadVideoManifest!(this.manifestFileUrl!, this._config, this);
             this._videoManifest.metadata = this._videoManifest.metadata || {};
             if (!this._videoManifest.metadata.preview && (this.defaultVideoPreview !== "" || this.defaultVideoPreviewPortrait !== "")) {
                 this._videoManifest.metadata.preview = this.defaultVideoPreview;
@@ -1017,7 +1016,7 @@ export default class Paella {
                 this.log.warn("Paella.loadUrl(): no preview image specified. Using default preview image.");
             }
 
-            this._manifestParser = new ManifestParser(this.videoManifest, this as any);
+            this._manifestParser = new ManifestParser(this.videoManifest, this);
     
             // Load custom icons from skin
             unloadSkinStyleSheets.apply(this.skin);
@@ -1031,7 +1030,7 @@ export default class Paella {
         catch (err: any) {
             this._playerState = PlayerState.ERROR;
             this.log.error(err);
-            this._errorContainer = new ErrorContainer(this as any, this.translate(err.message));
+            this._errorContainer = new ErrorContainer(this, this.translate(err.message));
             throw err;
         }
     }
@@ -1042,7 +1041,7 @@ export default class Paella {
      */
     async loadPlayer(): Promise<void> {
         try {
-            this._captionsCanvas = new CaptionCanvas(this as any, this._containerElement);
+            this._captionsCanvas = new CaptionCanvas(this, this._containerElement);
 
             if (this._playerState !== PlayerState.MANIFEST) {
                 throw new Error(this.translate("loadPlayer(): Invalid current player state: $1", [PlayerStateNames[this._playerState]]));
@@ -1057,15 +1056,15 @@ export default class Paella {
     
             await this.videoContainer!.load(this.videoManifest?.streams);
     
-            triggerEvent(this as any, Events.STREAM_LOADED);
+            triggerEvent(this, Events.STREAM_LOADED);
             
-            this._playbackBar = new PlaybackBar(this as any, this.containerElement);
+            this._playbackBar = new PlaybackBar(this, this.containerElement);
             
             await this._playbackBar.load();
             
             // UI hide timer
             this._hideUiTime = this.config.ui?.hideUITimer ?? 5000;
-            setupAutoHideUiTimer(this as any);
+            setupAutoHideUiTimer(this);
             
             this._captionsCanvas.load();
 
@@ -1077,7 +1076,7 @@ export default class Paella {
             // Reload the video layout once the playback bar is loaded
             await this.videoContainer!.updateLayout();
 
-            triggerEvent(this as any, Events.PLAYER_LOADED);
+            triggerEvent(this, Events.PLAYER_LOADED);
     
             const hideTimeLine = !(this.videoManifest.metadata.visibleTimeLine ?? true);
             if (hideTimeLine) {
@@ -1096,7 +1095,7 @@ export default class Paella {
                 this._loader.removeFromParent();
                 this._loader = undefined;
             }
-            this._errorContainer = new ErrorContainer(this as any, err.message);
+            this._errorContainer = new ErrorContainer(this, err.message);
             throw err;
         }
     }
@@ -1185,9 +1184,9 @@ export default class Paella {
         this.log.debug("Unloading paella player");
         
         // EventLogPlugin plugins are loaded first, so that all lifecycle events can be captured.
-        await unloadLogEventPlugins(this as any);
+        await unloadLogEventPlugins(this);
         
-        await unregisterPlugins(this as any);
+        await unregisterPlugins(this);
         
         this._manifestLoaded = false;
         this._previewContainer?.removeFromParent();
@@ -1223,15 +1222,15 @@ export default class Paella {
         this._captionsCanvas?.unload();
         this._captionsCanvas = undefined;
         
-        clearAutoHideTimer(this as any);
+        clearAutoHideTimer(this);
         
-        triggerEvent(this as any, Events.PLAYER_UNLOADED);
+        triggerEvent(this, Events.PLAYER_UNLOADED);
         
         if (this.videoManifest?.metadata?.preview) {
             buildPreview.apply(this);
         }
         
-        unregisterEvents(this as any);
+        unregisterEvents(this);
         this._playerState = PlayerState.MANIFEST;
     }
 
@@ -1274,14 +1273,14 @@ export default class Paella {
                     h: this.videoContainer!.element.offsetHeight
                 }
             };
-            triggerEvent(this as any, Events.RESIZE, { size: getSize() });
+            triggerEvent(this, Events.RESIZE, { size: getSize() });
 
             if (this._resizeEndTimer) {
                 clearTimeout(this._resizeEndTimer);
             }
 
             this._resizeEndTimer = window.setTimeout(() => {
-                triggerEvent(this as any, Events.RESIZE_END, { size: getSize() });
+                triggerEvent(this, Events.RESIZE_END, { size: getSize() });
             }, 1000);
         }
     }
@@ -1295,7 +1294,7 @@ export default class Paella {
             this._uiHidden = true;
             this.videoContainer?.hideUserInterface();
             this.playbackBar?.hideUserInterface();
-            triggerEvent(this as any, Events.HIDE_UI);
+            triggerEvent(this, Events.HIDE_UI);
         }
     }
     
@@ -1306,7 +1305,7 @@ export default class Paella {
     async showUserInterface(): Promise<void> {
         this.videoContainer?.showUserInterface();
         this.playbackBar?.showUserInterface();
-        this._uiHidden && triggerEvent(this as any, Events.SHOW_UI);
+        this._uiHidden && triggerEvent(this, Events.SHOW_UI);
         this._uiHidden = false;
     }
 
