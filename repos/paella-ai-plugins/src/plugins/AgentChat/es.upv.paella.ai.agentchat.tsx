@@ -320,12 +320,12 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
         const getChunkByIndexTool = tool(
             async ({ index }) => {
                 const total = this._vectorStore!.memoryVectors.length;
-                
-                
+
+
                 if (index < 0 || index >= total) {
                     return `Error: Index ${index} is out of range. Please provide an index between 0 and ${total - 1}.`;
                 }
-                        
+
                 const chunk = this._vectorStore!.memoryVectors[index];
                 return `--- CHUNK ${index} CONTENT ---\n${chunk.content}`;
             },
@@ -338,20 +338,106 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
             }
         );
 
+        // Player information tools
+
+        const getCurrentTimeTool = tool(
+            async () => {
+                const time = await this.player.currentTime();
+                if (time === undefined || time === null) {
+                    return "Unable to get current time. The video may not be playing.";
+                }
+                const minutes = Math.floor(time / 60);
+                const seconds = Math.floor(time % 60);
+                return `Current time: ${time.toFixed(1)} seconds (${minutes}:${String(seconds).padStart(2, '0')})`;
+            },
+            {
+                name: "get_current_time",
+                description: "Returns the current playback position in the video. Use when the user asks where they are in the video, what timestamp they are at, or how far they are into the video.",
+                schema: z.object({}),
+            }
+        );
+
+        const getDurationTool = tool(
+            async () => {
+                const duration = await this.player.duration();
+                if (duration === undefined || duration === null) {
+                    return "Unable to get video duration. The video may not be loaded.";
+                }
+                const minutes = Math.floor(duration / 60);
+                const seconds = Math.floor(duration % 60);
+                return `Total duration: ${duration.toFixed(1)} seconds (${minutes}:${String(seconds).padStart(2, '0')})`;
+            },
+            {
+                name: "get_duration",
+                description: "Returns the total duration of the video. Use when the user asks how long the video is, the total length, or the end time.",
+                schema: z.object({}),
+            }
+        );
+
+        const getChaptersTool = tool(
+            async () => {
+                const chapters = this.player.chapters?.chapterList ?? [];
+                if (chapters.length === 0) {
+                    return "No chapters available for this video.";
+                }
+                const list = chapters.map((ch: any, i: number) => {
+                    const time = `${Math.floor(ch.time / 60)}:${String(Math.floor(ch.time % 60)).padStart(2, '0')}`;
+                    return `${i + 1}. [${time}] ${ch.title}${ch.description ? ` - ${ch.description}` : ""}`;
+                }).join("\n");
+                return `--- CHAPTERS ---\n${list}`;
+            },
+            {
+                name: "get_chapters",
+                description: "Returns the list of video chapters with their titles, timestamps, and optional descriptions. Use when the user asks about the video structure, wants to know what sections exist, or wants to navigate to a specific topic.",
+                schema: z.object({}),
+            }
+        );
+
+        const getMetadataTool = tool(
+            async () => {
+                const meta = this.player.metadata;
+                const title = meta.title || "Unknown title";
+                const duration = await this.player.duration();
+                const mins = Math.floor((duration ?? 0) / 60);
+                const secs = Math.floor((duration ?? 0) % 60);
+                const chapterCount = this.player.chapters?.chapterList?.length ?? 0;
+
+                let info = `Title: ${title}`;
+                info += `\nDuration: ${mins}m ${secs}s`;
+                if (chapterCount > 0) {
+                    info += `\nChapters: ${chapterCount}`;
+                }
+                if (meta.preview) {
+                    info += `\nHas preview image: Yes`;
+                }
+                return info;
+            },
+            {
+                name: "get_metadata",
+                description: "Returns basic video information like title, duration, and chapter count. Use when the user asks what video they are watching or for general information about the content.",
+                schema: z.object({}),
+            }
+        );
 
         const systemPrompt = this.config.systemPrompt ?? `You are a virtual assistant. Your main goal is to help students resolve questions about the video or class they are watching.
-        
-        You have three tools available:
+
+        You have seven tools available:
         - 'search_in_class': To search for concepts, topics or details within the class content.
         - 'get_total_chunks': To find out how many chunks the transcript is divided into.
         - 'get_chunk_by_index': To read the exact text of a specific chunk.
-        
+        - 'get_current_time': To know the current playback position.
+        - 'get_duration': To know the total video duration.
+        - 'get_chapters': To get the list of video chapters with timestamps.
+        - 'get_metadata': To get basic video information (title, duration, etc.).
+
         STRICT RULES:
-        1. CONTENT SEARCH: When the user asks about any concept, topic or detail from the class, you MUST use the 'search_in_class' tool. 
+        1. CONTENT SEARCH: When the user asks about any concept, topic or detail from the class, you MUST use the 'search_in_class' tool.
         2. ZERO HALLUCINATIONS: NEVER make up information or answer based on your general knowledge if they ask about the video content. Base your answer ONLY on the information returned by your tools.
         3. ERROR HANDLING: If the search tool returns nothing, or if a chunk is empty, kindly tell the user that topic is not mentioned in the current video or that the chunk does not contain information.
         4. TONE: Respond clearly, concisely, and in an academic but approachable tone.
-        5. TIMESTAMPS: When you reference a specific moment in the class, include the timestamp in m:ss format (e.g. "At the 12:34 mark, the professor explains..."). Timestamps in your response are automatically converted to clickable links.`;
+        5. TIMESTAMPS: When you reference a specific moment in the class, include the timestamp in m:ss format (e.g. "At the 12:34 mark, the professor explains..."). Timestamps in your response are automatically converted to clickable links.
+        6. CHAPTERS: When the user asks about video structure or wants to find a specific topic, use 'get_chapters' to show available sections.
+        7. PLAYER AWARENESS: Use 'get_current_time' and 'get_duration' when the user asks about timing, progress, or position in the video.`;
         
 
         const model = await this.getModel();
@@ -363,7 +449,11 @@ export default class AIAgentChatPlugin extends InteractiveAreaPlugin<AIAgentChat
             tools: [
                 searchInClassTool,
                 getTotalChunksTool,
-                getChunkByIndexTool
+                getChunkByIndexTool,
+                getCurrentTimeTool,
+                getDurationTool,
+                getChaptersTool,
+                getMetadataTool
             ],
             systemPrompt: systemPrompt,
         });
