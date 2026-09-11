@@ -78,12 +78,6 @@ export const PlayerStateNames = Object.freeze([
     'ERROR'
 ]);
 
-function buildPreview(this: Paella): void {
-    const preview = (this.videoManifest?.metadata?.preview && resolveResourcePath(this, this.videoManifest?.metadata?.preview)) || this.defaultVideoPreview;
-    const previewPortrait = (this.videoManifest?.metadata?.previewPortrait && resolveResourcePath(this, this.videoManifest?.metadata?.previewPortrait)) || this.defaultVideoPreviewPortrait;
-    this._previewContainer = new PreviewContainer(this, this._containerElement, preview, previewPortrait);
-}
-
 import ManifestParser from "./core/ManifestParser";
 import { DomClass } from './core/dom';
 
@@ -130,100 +124,6 @@ export interface ContainerSize {
 export interface CustomIcon {
     pluginName: string;
     iconName: string;
-}
-
-// Used in the first step of loadManifest and loadUrl
-async function preLoadPlayer(this: Paella): Promise<void> {
-    this._playerState = PlayerState.LOADING_MANIFEST;
-    this._manifestLoaded = true;
-
-    this.log.debug("Loading paella player");
-    this._config = await this.initParams.loadConfig!(this.configUrl, this);
-
-    // Override config.json options from skin
-    overrideSkinConfig.apply(this.skin, [this._config]);
-
-    setupDefaultLanguage(this);
-
-    this._defaultVideoPreview = this._config.defaultVideoPreview || this._initParams.defaultVideoPreview || "";
-    this._defaultVideoPreviewPortrait = this._config.defaultVideoPreviewPortrait || this._initParams.defaultVideoPreviewPortrait || "";
-
-    this._cookieConsent = new CookieConsent(this, {
-        getConsent: this._initParams.getCookieConsentFunction, 
-        getDescription: this._initParams.getCookieDescriptionFunction as any
-    });
-
-    this._preferences = new Preferences(this);
-
-    const urlSearch = new URLSearchParams(window.location.search);
-    const caseInsensitiveParams = new URLSearchParams();
-    for (const [name, value] of urlSearch) {
-        caseInsensitiveParams.append(name.toLowerCase(), value);
-    }
-    const urlParamLogLevel = caseInsensitiveParams.get("loglevel");
-    const logLevel = (urlParamLogLevel && Array.from(Object.keys(LOG_LEVEL)).indexOf(urlParamLogLevel.toUpperCase()) !== -1) ?
-        urlParamLogLevel :
-        this._config.logLevel || "INFO";
-    this._log.setLevel(logLevel);
-
-    // Load localization dictionaries
-    await this._initParams.loadDictionaries!(this);
-
-    registerPlugins(this);
-
-    // EventLogPlugin plugins are loaded first, so that all lifecycle events can be captured.
-    await loadLogEventPlugins(this);
-
-    // Create video container.
-    this._videoCanvasArea = new VideoCanvasArea(this, this._containerElement);
-    this._videoContainer = new VideoContainer(this, this._videoCanvasArea.element);
-    this._videoCanvasArea[setVideoCanvasAreaVideoContainer](this._videoContainer);
-    
-    // This function will load the video plugins
-    await this.videoContainer!.create();
-
-    // Load plugin modules dictionaries
-    for (const module of this.pluginModules) {
-        const dict = module.getDictionaries && await module.getDictionaries();
-        if (dict) {
-            for (const lang in dict) {
-                addDictionary(lang as any, dict[lang]);
-            }
-        }
-    }
-}
-
-// Used in the last step of loadManifest and loadUrl
-async function postLoadPlayer(this: Paella): Promise<void> {
-    this.log.debug("Video manifest loaded:");
-    this.log.debug(this.videoManifest);
-
-    // Load data plugins
-    this._data = new Data(this);
-
-    // Load default dictionaries
-    for (const lang in defaultDictionaries) {
-        const dict = (defaultDictionaries as any)[lang];
-        addDictionary(lang as any, dict);
-    }
-
-    this._playerState = PlayerState.MANIFEST;
-    triggerEvent(this, Events.MANIFEST_LOADED);
-
-    // The video preview is required
-    if (!this.videoManifest?.metadata?.preview) {
-        throw new Error("No preview image found in video manifest, and no default preview image defined.");
-    }
-    else {
-        buildPreview.apply(this);
-    }
-
-    checkManifestIntegrity(this._videoManifest);
-
-    const configDictionaries = this.config?.dictionaries;
-    for (const lang in configDictionaries) {
-        this.addDictionary(lang, configDictionaries[lang]);
-    }
 }
 
 /**
@@ -904,6 +804,106 @@ export default class Paella {
         })
     }
 
+    private buildPreview(): void {
+        const preview = (this.videoManifest?.metadata?.preview && resolveResourcePath(this, this.videoManifest?.metadata?.preview)) || this.defaultVideoPreview;
+        const previewPortrait = (this.videoManifest?.metadata?.previewPortrait && resolveResourcePath(this, this.videoManifest?.metadata?.previewPortrait)) || this.defaultVideoPreviewPortrait;
+        this._previewContainer = new PreviewContainer(this, this._containerElement, preview, previewPortrait);
+    }
+
+    // Used in the first step of loadManifest and loadUrl
+    private async preLoadPlayer(): Promise<void> {
+        this._playerState = PlayerState.LOADING_MANIFEST;
+        this._manifestLoaded = true;
+
+        this.log.debug("Loading paella player");
+        this._config = await this.initParams.loadConfig!(this.configUrl, this);
+
+        // Override config.json options from skin
+        overrideSkinConfig.apply(this.skin, [this._config]);
+
+        setupDefaultLanguage(this);
+
+        this._defaultVideoPreview = this._config.defaultVideoPreview || this._initParams.defaultVideoPreview || "";
+        this._defaultVideoPreviewPortrait = this._config.defaultVideoPreviewPortrait || this._initParams.defaultVideoPreviewPortrait || "";
+
+        this._cookieConsent = new CookieConsent(this, {
+            getConsent: this._initParams.getCookieConsentFunction, 
+            getDescription: this._initParams.getCookieDescriptionFunction as any
+        });
+
+        this._preferences = new Preferences(this);
+
+        const urlSearch = new URLSearchParams(window.location.search);
+        const caseInsensitiveParams = new URLSearchParams();
+        for (const [name, value] of urlSearch) {
+            caseInsensitiveParams.append(name.toLowerCase(), value);
+        }
+        const urlParamLogLevel = caseInsensitiveParams.get("loglevel");
+        const logLevel = (urlParamLogLevel && Array.from(Object.keys(LOG_LEVEL)).indexOf(urlParamLogLevel.toUpperCase()) !== -1) ?
+            urlParamLogLevel :
+            this._config.logLevel || "INFO";
+        this._log.setLevel(logLevel);
+
+        // Load localization dictionaries
+        await this._initParams.loadDictionaries!(this);
+
+        registerPlugins(this);
+
+        // EventLogPlugin plugins are loaded first, so that all lifecycle events can be captured.
+        await loadLogEventPlugins(this);
+
+        // Create video container.
+        this._videoCanvasArea = new VideoCanvasArea(this, this._containerElement);
+        this._videoContainer = new VideoContainer(this, this._videoCanvasArea.element);
+        this._videoCanvasArea[setVideoCanvasAreaVideoContainer](this._videoContainer);
+
+        // This function will load the video plugins
+        await this.videoContainer!.create();
+
+        // Load plugin modules dictionaries
+        for (const module of this.pluginModules) {
+            const dict = module.getDictionaries && await module.getDictionaries();
+            if (dict) {
+                for (const lang in dict) {
+                    addDictionary(lang as any, dict[lang]);
+                }
+            }
+        }
+    }
+
+    // Used in the last step of loadManifest and loadUrl
+    private async postLoadPlayer(): Promise<void> {
+        this.log.debug("Video manifest loaded:");
+        this.log.debug(this.videoManifest);
+
+        // Load data plugins
+        this._data = new Data(this);
+
+        // Load default dictionaries
+        for (const lang in defaultDictionaries) {
+            const dict = (defaultDictionaries as any)[lang];
+            addDictionary(lang as any, dict);
+        }
+
+        this._playerState = PlayerState.MANIFEST;
+        triggerEvent(this, Events.MANIFEST_LOADED);
+
+        // The video preview is required
+        if (!this.videoManifest?.metadata?.preview) {
+            throw new Error("No preview image found in video manifest, and no default preview image defined.");
+        }
+        else {
+            this.buildPreview();
+        }
+
+        checkManifestIntegrity(this._videoManifest);
+
+        const configDictionaries = this.config?.dictionaries;
+        for (const lang in configDictionaries) {
+            this.addDictionary(lang, configDictionaries[lang]);
+        }
+    }
+
     /**
      * Load a video from a URL.
      * @param {string|string[]} url - The video URL(s).
@@ -934,7 +934,7 @@ export default class Paella {
         }
 
         try {
-            await preLoadPlayer.apply(this);
+            await this.preLoadPlayer();
 
             if (!preview && (this.defaultVideoPreview !== "" || this.defaultVideoPreviewPortrait !== "")) {
                 preview = this.defaultVideoPreview;
@@ -971,7 +971,7 @@ export default class Paella {
                 })
             };
 
-            await postLoadPlayer.apply(this);
+            await this.postLoadPlayer();
         }
         catch (err: any) {
             this._playerState = PlayerState.ERROR;
@@ -991,7 +991,7 @@ export default class Paella {
         if (this._manifestLoaded) return;
 
         try {
-            await preLoadPlayer.apply(this);
+            await this.preLoadPlayer();
     
             this._videoId = await this.initParams.getVideoId!(this._config, this);
             if (this.videoId === null) {
@@ -1021,7 +1021,7 @@ export default class Paella {
             // Load custom style sheets
             await loadSkinStyleSheets.apply(this.skin);
 
-            await postLoadPlayer.apply(this);
+            await this.postLoadPlayer();
         }
         catch (err: any) {
             this._playerState = PlayerState.ERROR;
@@ -1223,7 +1223,7 @@ export default class Paella {
         triggerEvent(this, Events.PLAYER_UNLOADED);
         
         if (this.videoManifest?.metadata?.preview) {
-            buildPreview.apply(this);
+            this.buildPreview();
         }
         
         unregisterEvents(this);
